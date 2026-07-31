@@ -20,10 +20,12 @@ struct CatalogEntry: Identifiable {
     /// gegenüber 6 Schätzfragen im Katalog käme sonst ständig zweimal
     /// hintereinander dasselbe Format. Gibt es keine Alternative, gewinnt der
     /// reguläre Zug: lieber wiederholen als gar nichts zeigen.
-    func encounter(forVisit visit: Int, avoiding lastKind: String? = nil) -> Encounter {
+    func encounter(forVisit visit: Int, avoiding lastKind: String? = nil,
+                   wantsGame: Bool? = nil) -> Encounter {
         let start = visit % encounters.count
         for offset in 0..<encounters.count {
             let candidate = encounters[(start + offset) % encounters.count]
+            if let wantsGame, candidate.isScored != wantsGame { continue }
             if candidate.kindLabel != lastKind { return candidate }
         }
         return encounters[start]

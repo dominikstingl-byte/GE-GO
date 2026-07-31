@@ -18,6 +18,13 @@ struct Find: Identifiable {
     /// Ob der Inhalt aus dem Handkatalog stammt oder aus dem Themennetz.
     let isHandwritten: Bool
 
+    /// Ob dahinter etwas zum Spielen steckt statt etwas zum Lesen.
+    ///
+    /// Entscheidet die Marke im Raum: einzelnes Blatt für Wissen, ganze Blüte
+    /// für ein Minispiel. Ohne diesen Unterschied sieht man einem Fundpunkt
+    /// nicht an, was einen erwartet – und genau das war die Rückmeldung.
+    var isMiniGame: Bool { encounter.isScored }
+
     /// Zwei Fundpunkte desselben Gegenstands sollen sich unterscheiden lassen.
     let id: String
 
@@ -44,10 +51,14 @@ enum FindResolver {
     /// zuletzt gezeigte Art. Beides zusammen sorgt dafür, dass ein Holzboden
     /// beim zweiten Antippen etwas anderes erzählt als beim ersten – und nicht
     /// zweimal hintereinander dasselbe Format bringt.
+    /// `wantsGame` steuert, ob bevorzugt ein Minispiel oder etwas zum Lesen
+    /// herauskommen soll. Gibt es im Vorrat nichts Passendes, gewinnt der
+    /// reguläre Zug – lieber die falsche Sorte als gar nichts.
     static func resolve(label: String, theme knownTheme: Theme? = nil,
-                        visit: Int, avoiding lastKind: String?, nonce: Int = 0) -> Find? {
+                        visit: Int, avoiding lastKind: String?, nonce: Int = 0,
+                        wantsGame: Bool? = nil) -> Find? {
         if let entry = ObjectCatalog.entry(for: label) {
-            let encounter = entry.encounter(forVisit: visit, avoiding: lastKind)
+            let encounter = entry.encounter(forVisit: visit, avoiding: lastKind, wantsGame: wantsGame)
             return Find(label: label,
                         name: entry.name,
                         strategy: entry.strategy,
@@ -67,6 +78,7 @@ enum FindResolver {
         var chosen = pool[start]
         for offset in 0..<pool.count {
             let candidate = pool[(start + offset) % pool.count]
+            if let wantsGame, candidate.encounter.isScored != wantsGame { continue }
             if candidate.encounter.kindLabel != lastKind { chosen = candidate; break }
         }
 

@@ -47,6 +47,42 @@ enum PetalMesh {
         return try? MeshResource.generate(from: [descriptor])
     }
 
+    /// Ein Blatt an seinem Platz im Ring – für die ganze Blüte.
+    ///
+    /// Anders als `generate` wird hier **nicht** zentriert: Die Kontur behält
+    /// ihre Lage zur Blütenmitte, wird gedreht und auf den Radius skaliert.
+    /// Nur so setzen sich die zehn Teile wieder zum Logo zusammen.
+    static func generateInBloom(for strategy: RStrategy, radius: Float) -> MeshResource? {
+        let angle = CGFloat(strategy.bloomAngle) * .pi / 180
+        let points = strategy.bloomOutline.map { point -> CGPoint in
+            // Im Uhrzeigersinn drehen, y zeigt wie in SwiftUI nach unten.
+            CGPoint(x: point.x * cos(angle) - point.y * sin(angle),
+                    y: point.x * sin(angle) + point.y * cos(angle))
+        }
+
+        let indices = triangulate(points)
+        guard !indices.isEmpty else { return nil }
+
+        // y umdrehen: In der AR-Szene zeigt y nach oben, in der Kontur nach unten.
+        let positions = points.map {
+            SIMD3<Float>(Float($0.x) * radius, Float(-$0.y) * radius, 0)
+        }
+
+        var descriptor = MeshDescriptor(name: "bloom-\(strategy.rawValue)")
+        descriptor.positions = MeshBuffers.Positions(positions)
+        descriptor.normals = MeshBuffers.Normals(
+            Array(repeating: SIMD3<Float>(0, 0, 1), count: positions.count))
+
+        var doubled = indices
+        for triangle in stride(from: 0, to: indices.count, by: 3) {
+            doubled.append(contentsOf: [indices[triangle + 2],
+                                        indices[triangle + 1],
+                                        indices[triangle]])
+        }
+        descriptor.primitives = .triangles(doubled)
+        return try? MeshResource.generate(from: [descriptor])
+    }
+
     // MARK: Kontur aufbereiten
 
     /// Verschiebt die Kontur in ihren eigenen Mittelpunkt und skaliert sie so,

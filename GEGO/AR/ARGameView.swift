@@ -82,6 +82,11 @@ struct ARGameView: UIViewRepresentable {
 
         /// Netze werden einmal gebaut und geteilt.
         private var meshes: [RStrategy: (fill: MeshResource, rim: MeshResource)] = [:]
+        private var bloomMeshes: [RStrategy: MeshResource] = [:]
+
+        /// Wie oft ein Fundpunkt ein Minispiel trägt statt etwas zum Lesen.
+        /// Selten genug, dass die Blüte etwas bedeutet.
+        private let gameChance = 25
 
         /// Blätter, die gerade verbucht wurden, kommen kurz nicht wieder.
         private var cooldown: [String: TimeInterval] = [:]
@@ -144,6 +149,12 @@ struct ARGameView: UIViewRepresentable {
                 let far = min(max(distance / 2.0, 0.7), 3.0)
                 let breath = 1 + 0.05 * sin(elapsed * 1.8 + Float(index) * 0.7)
                 spot.petal.scale = SIMD3<Float>(repeating: far * breath)
+
+                // Die Blüte dreht sich langsam. Ein Minispiel soll auffallen.
+                if spot.find.isMiniGame {
+                    spot.petal.orientation *= simd_quatf(angle: elapsed * 0.35,
+                                                         axis: SIMD3<Float>(0, 0, 1))
+                }
             }
         }
 
@@ -236,11 +247,17 @@ struct ARGameView: UIViewRepresentable {
                 guard !tooClose else { continue }
 
                 nonce += 1
+                // Höchstens eine Blüte gleichzeitig in der Szene – sonst nutzt
+                // sich das Besondere ab.
+                let bloomInScene = spots.contains { $0.find.isMiniGame }
+                let wantsGame = !bloomInScene && Int.random(in: 0..<100) < gameChance
+
                 guard let find = FindResolver.resolve(label: track.label,
                                                       theme: track.theme,
                                                       visit: state.findings[track.label] ?? 0,
                                                       avoiding: state.lastEncounterKind,
-                                                      nonce: nonce) else { continue }
+                                                      nonce: nonce,
+                                                      wantsGame: wantsGame) else { continue }
                 add(find, at: world, in: view)
             }
 
@@ -348,7 +365,31 @@ struct ARGameView: UIViewRepresentable {
             return (fill, rim)
         }
 
+        /// Die ganze Blüte als Marke für ein Minispiel.
+        ///
+        /// Zehn Teile in ihren Logofarben an ihren Ringplätzen. Man sieht schon
+        /// von weitem, dass hier etwas anderes wartet als ein Fun Fact.
+        private func bloomEntity() -> Entity {
+            let bloom = Entity()
+            for strategy in RStrategy.allCases {
+                let mesh: MeshResource
+                if let cached = bloomMeshes[strategy] {
+                    mesh = cached
+                } else if let built = PetalMesh.generateInBloom(for: strategy, radius: 0.10) {
+                    bloomMeshes[strategy] = built
+                    mesh = built
+                } else { continue }
+                bloom.addChild(ModelEntity(mesh: mesh,
+                                           materials: [UnlitMaterial(color: UIColor(strategy.brandColor))]))
+            }
+            return bloom
+        }
+
         private func add(_ find: Find, at position: SIMD3<Float>, in view: ARView) {
+            if find.isMiniGame {
+                addEntity(bloomEntity(), for: find, at: position, in: view, hitRadius: 0.12)
+                return
+            }
             guard let mesh = mesh(for: find.strategy) else { return }
 
             // Heller Umriss dahinter, minimal größer. Vor einem Kamerabild kann
@@ -364,26 +405,31 @@ struct ARGameView: UIViewRepresentable {
             let petal = Entity()
             petal.addChild(rim)
             petal.addChild(fill)
-            petal.name = find.id
+            addEntity(petal, for: find, at: position, in: view, hitRadius: 0.10)
+        }
+
+        private func addEntity(_ entity: Entity, for find: Find, at position: SIMD3<Float>,
+                               in view: ARView, hitRadius: Float) {
+            entity.name = find.id
 
             // Trefferfeld als Kugel: Auf eine papierdünne Fläche zielt niemand.
             let target = ModelEntity()
             target.name = find.id
-            target.collision = CollisionComponent(shapes: [.generateSphere(radius: 0.10)])
-            petal.addChild(target)
+            target.collision = CollisionComponent(shapes: [.generateSphere(radius: hitRadius)])
+            entity.addChild(target)
 
             let anchor = AnchorEntity(world: position)
-            anchor.addChild(petal)
+            anchor.addChild(entity)
             view.scene.addAnchor(anchor)
 
-            spots.append(Spot(find: find, position: position, anchor: anchor, petal: petal))
+            spots.append(Spot(find: find, position: position, anchor: anchor, petal: entity))
 
             while spots.count > maximumSpots {
                 let oldest = spots.removeFirst()
                 view.scene.removeAnchor(oldest.anchor)
             }
 
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            UIImpactFeedbackGenerator(style: find.isMiniGame ? .medium : .light).impactOccurred()
         }
 
         private func remove(_ label: String, in view: ARView) {
