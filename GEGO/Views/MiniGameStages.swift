@@ -710,7 +710,7 @@ struct MemoryStage: View {
 
     private func flip(_ card: Card) {
         guard !busy, !matched.contains(card.id), !faceUp.contains(card.id), !done else { return }
-        withAnimation { faceUp.insert(card.id) }
+        withAnimation { _ = faceUp.insert(card.id) }
 
         guard faceUp.count == 2 else { return }
         attempts += 1

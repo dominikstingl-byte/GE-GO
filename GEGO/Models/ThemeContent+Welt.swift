@@ -200,6 +200,11 @@ extension Theme {
                 sourceHint: "Abfallbilanz Deutschland, Anteil Bau- und Abbruchabfälle"
             ))),
 
+        ThemedEncounter(strategy: .repair, sdgs: [.sustainableCities, .responsibleConsumption], encounter:
+            .fact(Fact(
+                text: "Der schlechteste Zustand für ein Gebäude ist nicht baufällig, sondern leerstehend. Ohne Heizung, ohne Lüftung, ohne jemanden, der ein undichtes Dach bemerkt, verfällt es um ein Vielfaches schneller – ein Haus wird von seinen Bewohnern instand gehalten, auch wenn keiner etwas repariert."
+            ))),
+
         ThemedEncounter(strategy: .refurbish, sdgs: [.sustainableCities, .climateAction], encounter:
             .duel(Duel(
                 question: "Ein altes, schlecht gedämmtes Haus.",
@@ -304,6 +309,18 @@ extension Theme {
                 betterIsA: false,
                 explanation: "Ein einziger Langstreckenflug übersteigt sehr viele alltägliche Entscheidungen zusammengenommen. Das entwertet den Alltag nicht – aber es sortiert ihn. Wer viel fliegt, kann das mit Mülltrennen nicht ausgleichen.",
                 sourceHint: "Emissionen Langstreckenflug pro Person vs. Ernährungsumstellung pro Jahr"
+            ))),
+
+        ThemedEncounter(strategy: .repurpose, sdgs: [.affordableEnergy, .responsibleConsumption], encounter:
+            .story(Story(
+                title: "Das zweite Leben der Batterie",
+                paragraphs: [
+                    "Ein Autoakku gilt als verbraucht, wenn er noch etwa achtzig Prozent seiner Kapazität hat. Für ein Auto ist das zu wenig – die Reichweite fällt zu stark.",
+                    "Achtzig Prozent sind aber sehr viel, wenn das Ding nicht fahren muss.",
+                    "Als Stromspeicher im Keller oder am Windpark spielt Gewicht keine Rolle und Reichweite gibt es nicht. Dort können dieselben Zellen noch viele Jahre arbeiten.",
+                    "Das ist R7 im großen Maßstab: nicht reparieren, nicht recyceln, sondern eine völlig neue Aufgabe finden, für die die Schwäche keine ist."
+                ],
+                sourceHint: "Second-Life-Nutzung von Traktionsbatterien, Restkapazität und Einsatzdauer"
             ))),
 
         ThemedEncounter(strategy: .remanufacture, sdgs: [.industryInnovation, .responsibleConsumption], encounter:
@@ -681,6 +698,12 @@ extension Theme {
                 sourceHint: "Kohlenstoffvorräte nach Landnutzungstyp, Moore vs. Wald"
             ))),
 
+        ThemedEncounter(strategy: .repair, sdgs: [.lifeOnLand, .sustainableCities], encounter:
+            .mission(Mission(
+                prompt: "Such eine Pflanze in deiner Nähe, der es sichtbar schlecht geht, und finde heraus, woran es liegt.",
+                hint: "Zu wenig Licht, zu viel Wasser, zu kleiner Topf. Zimmerpflanzen sterben fast nie an Vernachlässigung – meistens an gut gemeinter Fürsorge."
+            ))),
+
         ThemedEncounter(strategy: .recover, sdgs: [.lifeOnLand], encounter:
             .hunt(Hunt(
                 prompt: "Finde zwei verschiedene Pflanzen.",
@@ -856,6 +879,12 @@ extension Theme {
                 highLabel: "größter Anteil",
                 explanation: "Die Anreise dominiert fast immer – und zwar so deutlich, dass die Wahl des Verkehrsmittels mehr entscheidet als die Wahl des Skigebiets. Das gilt für die meisten Freizeitaktivitäten: Nicht die Aktivität zählt, sondern der Weg dorthin.",
                 sourceHint: "Anteile am Fußabdruck eines Skiurlaubs, Anreise vs. Betrieb"
+            ))),
+
+        ThemedEncounter(strategy: .refurbish, sdgs: [.responsibleConsumption, .decentWork], encounter:
+            .video(VideoTip(
+                searchTerm: "Laufschuhe besohlen Sportschuh Reparatur Werkstatt",
+                why: "Dass man Laufschuhe neu besohlen lassen kann, wissen die wenigsten – es gibt Werkstätten, die genau das machen. Ein Sportschuh ist selten am Obermaterial verschlissen, fast immer an der Sohle."
             ))),
 
         ThemedEncounter(strategy: .repurpose, sdgs: [.goodHealth], encounter:
