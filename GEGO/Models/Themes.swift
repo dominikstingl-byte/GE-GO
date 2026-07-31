@@ -44,10 +44,16 @@ enum Theme: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    /// Was als Überschrift über dem Fund steht. Bewusst der Werkstoff oder die
-    /// Gattung und nicht der erkannte Begriff: „Holz“ ist ehrlicher als
-    /// „wood_processed“, und für 1303 Begriffe deutsche Namen zu pflegen wäre
-    /// Arbeit ohne Ertrag – wer den Gegenstand vor sich sieht, weiß, was es ist.
+    /// Der Gattungsname – **nur noch der Rückfall** für die Überschrift.
+    ///
+    /// Hier stand einmal die Begründung, deutsche Namen für 1303 Begriffe zu
+    /// pflegen sei Arbeit ohne Ertrag: Wer den Gegenstand vor sich sieht,
+    /// wisse ja, was es ist. Das war falsch. Wenn die App „Geschirr“ sagt,
+    /// während man eine Gabel in der Hand hält, fühlt man sich nicht erkannt,
+    /// sondern einsortiert. Die Namen stehen jetzt in `LabelNames`.
+    ///
+    /// Der **Inhalt** bleibt beim Thema – Gabel und Teller haben dieselbe
+    /// Nachhaltigkeitsgeschichte. Nur die Überschrift wird konkret.
     var name: String {
         switch self {
         case .wood: return "Holz"

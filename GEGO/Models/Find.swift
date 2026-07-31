@@ -86,8 +86,10 @@ enum FindResolver {
             if candidate.encounter.kindLabel != lastKind { chosen = candidate; break }
         }
 
+        // Konkret, wo ein Name hinterlegt ist – der Gattungsname ist nur der
+        // Rückfall. „Gabel" statt „Geschirr", „Karton" statt „Papier".
         return Find(label: label,
-                    name: theme.name,
+                    name: LabelNames.german(for: label) ?? theme.name,
                     strategy: chosen.strategy,
                     sdgs: chosen.sdgs,
                     encounter: chosen.encounter,

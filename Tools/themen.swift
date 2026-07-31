@@ -340,7 +340,11 @@ let regeln: [Regel] = [
                   "bouquet", "flower_arrangement", "grass", "moss", "shrub",
                   "ferns", "ivy", "clover", "holly", "mistletoe", "cactus",
                   "succulent", "leaf", "petal", "pollen", "hay", "straw_hay",
-                  "christmas_tree", "potted_plant"],
+                  "christmas_tree", "potted_plant",
+                  "chrysanthemum", "dandelion", "cornflower"],
+          // Diese vier stehen hier ausdrücklich, weil sie sonst über
+          // Teilzeichenketten woanders landen: „ant" in Chrysanthemum,
+          // „lion" in Dandelion, „corn" in Cornflower.
           contains: ["rose", "tulip", "daisy", "daffodil", "lily", "orchid",
                      "sunflower", "dahlia", "carnation", "chrysanthemum",
                      "marigold", "petunia", "begonia", "poinsettia", "snapdragon",
@@ -397,7 +401,7 @@ let regeln: [Regel] = [
     // Letzte Instanz. Fängt auch ab, was eine künftige iOS-Fassung neu in die
     // Taxonomie aufnimmt – dann erscheint der Begriff wenigstens, statt still
     // zu verschwinden.
-    Regel(thema: "stuff", exact: ["material", "object", "thing"]),
+    Regel(thema: "stuff", exact: ["material", "object", "thing", "piggybank"]),
 
     Regel(thema: "tableware",
           exact: ["tableware", "housewares", "utensil", "plate", "bowl", "dish",

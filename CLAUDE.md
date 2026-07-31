@@ -87,7 +87,8 @@ GEGO/
   Vision/         SceneRecognizer – Erkennung und Themenabstimmung
   Models/         RStrategy, SDG, Encounter, ObjectCatalog (Handkatalog),
                   Themes + ThemeContent+… (Themennetz), ThemeMapping
-                  (erzeugt), Find (löst Begriff → Fund auf)
+                  (erzeugt), LabelNames (deutsche Namen), MiniGameCatalog,
+                  Find (löst Begriff → Fund auf)
   Game/           GameState – Fortschritt, Sammlung, Jagd, UserDefaults
   Views/          EncounterView, CollectionView, DiagnosticsView
   DesignSystem/   Theme (kopiert aus Danach), Bloom (Blätter aus dem Logo)
@@ -105,6 +106,17 @@ swift Tools/themen.swift    > GEGO/Models/ThemeMapping.swift
 
 `themen.swift` meldet auf stderr, was ohne Thema durchfällt. Diese Liste
 gehört abgearbeitet, nicht ignoriert – aktuell ist sie leer.
+
+**Deutsche Namen** stehen in `LabelNames` und werden von Hand gepflegt.
+`swift Tools/namen.swift` listet, was noch fehlt – aktuell nichts. Fehlt ein
+Name, heißt der Fund nach seiner Gattung, und genau das fühlt sich für den
+Spieler an, als hätte die App nur ungefähr hingeschaut.
+
+**Vorsicht bei `contains`-Regeln** in `themen.swift`: Teilzeichenketten
+greifen mitten im Wort. `ant` fing Chrys**ant**hemum, `lion` fing Dande**lion**,
+`wood` fing **wood**pecker. Solche Fehler fallen nie auf, weil das Ergebnis
+plausibel aussieht – nach jeder Regeländerung gegen die erzeugte Tabelle
+prüfen, nicht gegen die Regeln im Kopf.
 
 **Die Blattkonturen sind ausgelesen, nicht nachgezeichnet.** `Tools/kontur.swift`
 zieht sie aus `Tools/GutEinern_Logo.png` und gibt sie als Punktlisten aus, die
@@ -265,9 +277,10 @@ Stand: baut, aber noch nie auf einem Gerät gelaufen.
 4. **Alle Inhalte unbelegt.** Jeder `sourceHint` muss abgearbeitet werden –
    inzwischen sind es über hundert. Das ist die größte offene Arbeit am
    Projekt und die einzige, die nicht Claude erledigen kann.
-5. **Themennamen sind grob.** Ein Fund heißt „Holz“, nicht „Dielenboden“. Für
-   1303 Begriffe deutsche Namen zu pflegen lohnt nicht; wer einzelne
-   Gegenstände hervorheben will, schreibt sie in den Handkatalog.
+5. **Inhalte sind auf Themenebene, Namen nicht.** Ein Fund heißt „Gabel“, der
+   Text dazu handelt aber von Geschirr allgemein. Das ist Absicht – Gabel und
+   Teller haben dieselbe Nachhaltigkeitsgeschichte. Wer einzelne Gegenstände
+   inhaltlich hervorheben will, schreibt sie in den Handkatalog.
 6. **Die Jagd ist ungetestet.** Ob sich in einem normalen Zimmer in 90
    Sekunden zwei weitere Gegenstände eines Themas erkennen lassen, weiß erst
    der Gerätetest. Falls nicht: `Hunt.seconds` hoch, `count` runter.
