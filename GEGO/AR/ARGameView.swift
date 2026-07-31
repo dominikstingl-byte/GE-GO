@@ -52,6 +52,11 @@ struct ARGameView: UIViewRepresentable {
             var label: String
             var point: CGPoint
             var hits: Int
+            /// Aufsummierte Stärke aller Beobachtungen. Nicht die Anzahl:
+            /// Ein eindeutiger Stuhl soll schneller erscheinen als eine
+            /// zweifelhafte Ecke, und eine feste Zahl von Durchläufen kann
+            /// diesen Unterschied nicht machen.
+            var evidence: Float
             var lastSeen: TimeInterval
             var placed = false
         }
@@ -76,15 +81,13 @@ struct ARGameView: UIViewRepresentable {
         private var cooldown: [String: TimeInterval] = [:]
         private let cooldownSeconds: TimeInterval = 25
 
-        /// Zweimal pro Sekunde auswerten. Jedes Bild zu analysieren würde
+        /// Knapp dreimal pro Sekunde auswerten. Jedes Bild zu analysieren würde
         /// nichts verbessern, aber Akku und Wärme deutlich verschlechtern.
-        private let interval: TimeInterval = 0.5
+        private let interval: TimeInterval = 0.35
 
-        /// Wie oft ein Thema bestätigt sein muss, bevor ein Punkt erscheint.
-        /// Bei einem halben Takt Abstand heißt drei: etwa anderthalb Sekunden
-        /// ruhig draufhalten. Das ist absichtlich träge – lieber ein Punkt
-        /// später als drei falsche sofort.
-        private let requiredHits = 3
+        /// Mindestens so viele Durchläufe, egal wie stark die Beobachtung ist.
+        /// Ein einzelnes Bild kann zufällig gut aussehen.
+        private let minimumHits = 2
 
         /// Wie weit eine Beobachtung wandern darf und noch als dieselbe gilt,
         /// als Anteil der Bildschirmbreite. Großzügig, weil die Kamera wackelt.
@@ -151,7 +154,7 @@ struct ARGameView: UIViewRepresentable {
             let viewport = view.bounds.size
             let transform = frame.displayTransform(for: .portrait, viewportSize: viewport)
             recognizer.minimumThemeScore = state.minimumThemeScore
-            recognizer.minimumMargin = state.minimumMargin
+            recognizer.minimumShare = state.minimumShare
             recognizer.collectsDiagnostics = state.diagnosticsEnabled
 
             queue.async { [weak self] in
@@ -173,6 +176,8 @@ struct ARGameView: UIViewRepresentable {
             if state.diagnosticsEnabled {
                 state.rawCandidates = report.raw
                 state.themeScores = report.themeScores
+                state.regionCount = report.regionCount
+                state.ripeningCount = tracks.filter { !$0.placed }.count
                 state.lastRejection = report.rejections.first
                 state.debugBoxes = report.sightings.map {
                     screenRect(for: $0.boundingBox, transform: transform, viewport: viewport)
@@ -191,6 +196,7 @@ struct ARGameView: UIViewRepresentable {
                     $0.theme == sighting.theme && hypot($0.point.x - point.x, $0.point.y - point.y) < radius
                 }) {
                     tracks[index].hits += 1
+                    tracks[index].evidence += sighting.score
                     tracks[index].lastSeen = now
                     // Der Punkt wandert mit, damit ein langsamer Schwenk die
                     // Beobachtung nicht abreißen lässt.
@@ -199,11 +205,14 @@ struct ARGameView: UIViewRepresentable {
                     tracks[index].label = sighting.label
                 } else {
                     tracks.append(Track(theme: sighting.theme, label: sighting.label,
-                                        point: point, hits: 1, lastSeen: now))
+                                        point: point, hits: 1, evidence: sighting.score,
+                                        lastSeen: now))
                 }
             }
 
-            for index in tracks.indices where tracks[index].hits >= requiredHits && !tracks[index].placed {
+            for index in tracks.indices where !tracks[index].placed
+                && tracks[index].hits >= minimumHits
+                && tracks[index].evidence >= state.requiredEvidence {
                 tracks[index].placed = true
                 let track = tracks[index]
 

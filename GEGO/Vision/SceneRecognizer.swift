@@ -10,8 +10,9 @@ struct Sighting {
     let label: String
     /// Summe der Konfidenz aller Begriffe, die auf dieses Thema zeigen.
     let score: Float
-    /// Wie klar das Thema vor dem zweitbesten liegt.
-    let margin: Float
+    /// Anteil des Gewinners an der gesamten Stimmensumme. Misst, ob überhaupt
+    /// ein Signal da ist – nicht, ob der Zweite knapp dahinterliegt.
+    let share: Float
     /// Normalisiert, in Vision-Koordinaten – Ursprung unten links.
     let boundingBox: CGRect
 }
@@ -66,23 +67,28 @@ final class SceneRecognizer {
     // Startwerte sind Vermutungen; belastbar wird das erst im Innenraum.
 
     /// Wie viel Summe ein Thema mindestens auf sich vereinen muss.
-    var minimumThemeScore: Float = 0.30
+    var minimumThemeScore: Float = 0.20
 
-    /// Wie deutlich das Gewinnerthema vor dem zweiten liegen muss. Unter
-    /// diesem Verhältnis ist die Szene mehrdeutig, und dann ist Schweigen
-    /// besser als Raten.
-    var minimumMargin: Float = 1.6
+    /// Welchen Anteil an der gesamten Stimmensumme der Gewinner halten muss.
+    ///
+    /// Früher stand hier ein Abstand zum zweiten Thema – das war ein
+    /// Denkfehler. Ein Holztisch ist gleichzeitig `wood` und `furniture`, und
+    /// **beide sind richtig**. Sie teilen sich die Stimmen, keiner kommt auf
+    /// den geforderten Vorsprung, und die App schweigt, obwohl sie den Tisch
+    /// erkannt hat. Der Anteil an der Gesamtsumme misst dagegen das, worum es
+    /// wirklich geht: ob überhaupt ein Signal da ist oder nur eine flache
+    /// Wolke aus zwölf Vermutungen.
+    var minimumShare: Float = 0.30
 
     /// Wie sicher der konkreteste Begriff mindestens sein muss, damit er den
     /// Fund benennen darf.
     var minimumLabelConfidence: Float = 0.05
 
     /// Wie viele Bereiche pro Bild überhaupt betrachtet werden.
-    var maximumRegions = 3
+    var maximumRegions = 4
 
-    /// Zu kleine Bereiche liefern unbrauchbare Zuschnitte. Bewusst großzügig:
-    /// Lieber wenige große Gegenstände als viele Fetzen.
-    var minimumRegionSize: CGFloat = 0.10
+    /// Zu kleine Bereiche liefern unbrauchbare Zuschnitte.
+    var minimumRegionSize: CGFloat = 0.07
 
     /// Wie viele Vorschläge je Bereich in die Abstimmung eingehen.
     private let votingDepth = 12
@@ -173,13 +179,11 @@ final class SceneRecognizer {
                                    winner.theme.name, winner.score, minimumThemeScore), ranked)
         }
 
-        let runnerUp = ranked.dropFirst().first?.score ?? 0
-        let margin = runnerUp > 0 ? winner.score / runnerUp : .greatestFiniteMagnitude
-        guard margin >= minimumMargin else {
-            return .failure(String(format: "%@ vs. %@ zu knapp (%.1f×)",
-                                   winner.theme.name,
-                                   ranked.dropFirst().first?.theme.name ?? "?",
-                                   margin), ranked)
+        let total = ranked.reduce(Float(0)) { $0 + $1.score }
+        let share = total > 0 ? winner.score / total : 0
+        guard share >= minimumShare else {
+            return .failure(String(format: "%@ nur %.0f%% der Stimmen – zu zerstreut",
+                                   winner.theme.name, share * 100), ranked)
         }
 
         // Benannt wird nach dem konkretesten Begriff. Oberbegriffe dürfen für
@@ -198,7 +202,7 @@ final class SceneRecognizer {
         return .success(Sighting(theme: winner.theme,
                                  label: named.label,
                                  score: winner.score,
-                                 margin: margin,
+                                 share: share,
                                  boundingBox: box),
                         ranked)
     }

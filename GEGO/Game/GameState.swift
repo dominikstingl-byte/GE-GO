@@ -119,10 +119,22 @@ final class GameState: ObservableObject {
     @Published var debugBoxes: [CGRect] = []
     @Published var lastRejection: String?
 
-    /// Die beiden Schrauben, an denen im Innenraum wirklich gedreht wird.
-    /// Beides Vermutungen – belastbar wird das erst am Gerät.
-    @Published var minimumThemeScore: Float = 0.30
-    @Published var minimumMargin: Float = 1.6
+    /// Wie viele auffällige Bereiche der letzte Durchlauf überhaupt gefunden
+    /// hat. Null heißt: Es liegt an der Auffälligkeitssuche, nicht an den
+    /// Schwellen – ein wichtiger Unterschied beim Einstellen.
+    @Published var regionCount: Int = 0
+
+    /// Wie viele Vermutungen gerade reifen, aber noch nicht gesetzt sind.
+    @Published var ripeningCount: Int = 0
+
+    /// Die drei Schrauben, an denen im Innenraum wirklich gedreht wird.
+    /// Alles Vermutungen – belastbar wird das erst am Gerät.
+    @Published var minimumThemeScore: Float = 0.20
+    @Published var minimumShare: Float = 0.30
+
+    /// Wie viel aufsummierte Beobachtungsstärke ein Punkt braucht. Kleiner
+    /// heißt: schneller, aber wackliger.
+    @Published var requiredEvidence: Float = 0.75
 
     // MARK: Sammlung
 

@@ -5,8 +5,8 @@ import SwiftUI
 /// Es beantwortet die Fragen, die sich ohne es nicht beantworten lassen:
 /// Erscheint kein Fundpunkt – sieht die Erkennung nichts, gewinnt kein Thema
 /// deutlich genug, oder liefert sie nur Oberbegriffe? Erscheint Unsinn –
-/// welches Thema hat gewonnen und mit welchem Abstand? Von außen ist beides
-/// jeweils ein einziges Symptom mit mehreren möglichen Ursachen.
+/// welches Thema hat gewonnen und mit welchem Stimmenanteil? Von außen ist
+/// beides jeweils ein einziges Symptom mit mehreren möglichen Ursachen.
 struct DiagnosticsView: View {
 
     @ObservedObject var state: GameState
@@ -47,33 +47,39 @@ struct DiagnosticsView: View {
                                 set: { state.minimumThemeScore = Float($0) }),
                  range: 0.05...1.2,
                  format: "%.2f",
-                 start: "0,30",
+                 start: "0,20",
                  explanation: "Alle Vorschläge zahlen auf ihr Thema ein. Hier steht, wie viel zusammenkommen muss. Höher heißt: seltener, aber sicherer.")
 
-            knob(title: "Abstand zum zweiten Thema",
-                 value: Binding(get: { Double(state.minimumMargin) },
-                                set: { state.minimumMargin = Float($0) }),
-                 range: 1.0...4.0,
-                 format: "%.1f×",
-                 start: "1,6×",
-                 explanation: "Wie deutlich das beste Thema vorn liegen muss. Ist die Szene mehrdeutig – halb Wand, halb Regal – ist Schweigen besser als Raten.")
+            knob(title: "Anteil an allen Stimmen",
+                 value: Binding(get: { Double(state.minimumShare) },
+                                set: { state.minimumShare = Float($0) }),
+                 range: 0.10...0.90,
+                 format: "%.0f%%",
+                 start: "30 %",
+                 explanation: "Wie viel vom Gesamtergebnis auf das beste Thema entfallen muss. Misst, ob überhaupt ein Signal da ist – nicht, ob der Zweite knapp dahinterliegt. Ein Holztisch ist zu Recht gleichzeitig Holz und Möbel.",
+                 percent: true)
 
-            Text("Ein Punkt erscheint erst, wenn dasselbe Thema dreimal hintereinander an derselben Stelle gewinnt. Etwa anderthalb Sekunden ruhig draufhalten.")
-                .font(.caption)
-                .foregroundStyle(Palette.textSecondary)
+            knob(title: "Nötige Beobachtungsstärke",
+                 value: Binding(get: { Double(state.requiredEvidence) },
+                                set: { state.requiredEvidence = Float($0) }),
+                 range: 0.2...2.5,
+                 format: "%.2f",
+                 start: "0,75",
+                 explanation: "Aufsummiert über mehrere Durchläufe, mindestens zwei. Ein eindeutiger Gegenstand ist damit nach etwa einer Sekunde da, ein zweifelhafter braucht länger. Kleiner heißt: schneller, aber wackliger.")
         }
         .cardStyle()
     }
 
     private func knob(title: String, value: Binding<Double>, range: ClosedRange<Double>,
-                      format: String, start: String, explanation: String) -> some View {
+                      format: String, start: String, explanation: String,
+                      percent: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack {
                 Text(title)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Palette.textPrimary)
                 Spacer()
-                Text(String(format: format, value.wrappedValue))
+                Text(String(format: format, percent ? value.wrappedValue * 100 : value.wrappedValue))
                     .font(.system(.body, design: .monospaced).weight(.semibold))
                     .foregroundStyle(Palette.accent)
             }
@@ -122,7 +128,7 @@ struct DiagnosticsView: View {
             SectionHeading(text: "Rohe Vorschläge")
 
             if state.rawCandidates.isEmpty {
-                Text("Noch nichts. Die Erkennung läuft zweimal pro Sekunde – kurz warten und die Kamera auf einen klar abgegrenzten Gegenstand halten.")
+                Text("Noch nichts. Die Erkennung läuft knapp dreimal pro Sekunde – kurz warten und die Kamera auf einen klar abgegrenzten Gegenstand halten.")
                     .font(.footnote)
                     .foregroundStyle(Palette.textSecondary)
             } else {
@@ -155,14 +161,18 @@ struct DiagnosticsView: View {
     private var situation: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
             SectionHeading(text: "Lage")
+            line("Auffällige Bereiche", "\(state.regionCount)")
+            line("Angenommene Sichtungen", "\(state.debugBoxes.count)")
+            line("Reift gerade", "\(state.ripeningCount)")
             line("Punkte in der Szene", "\(state.spotCount)")
-            line("Rahmen gezeichnet", "\(state.debugBoxes.count)")
-            line("Bestätigungen nötig", "3")
             if let rejection = state.lastRejection {
                 Text(rejection)
                     .font(.footnote)
                     .foregroundStyle(Palette.caution)
             }
+            Text("Null auffällige Bereiche heißt: Es liegt an der Bildsuche, nicht an den Schwellen – dann näher an einen einzelnen Gegenstand halten.")
+                .font(.caption)
+                .foregroundStyle(Palette.textSecondary)
             Text("Die gelben Rahmen im Kamerabild zeigen, wo die Erkennung den Gegenstand vermutet. Liegen sie neben dem Gegenstand, ist die Umrechnung von Vision auf den Bildschirm schuld – nicht die Erkennung. Die Stelle ist in ARGameView kommentiert.")
                 .font(.caption)
                 .foregroundStyle(Palette.textSecondary)

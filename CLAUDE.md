@@ -123,17 +123,23 @@ dem zu viele Punkte kamen und fast alle falsch waren:
 - **Abstimmung statt bester Begriff.** Die Taxonomie ist hierarchisch, und
   drinnen gewinnen fast immer die Wurzeln: `material`, `structure`,
   `interior_room`, `textile`. Sie sind nicht falsch, nur wertlos – sie passen
-  auf jede Wand. Deshalb zahlen alle Vorschläge auf ihr **Thema** ein, das
-  Thema mit der höchsten Summe gewinnt, und es muss deutlich vor dem zweiten
-  liegen. Benannt wird der Fund nach dem konkretesten Begriff darin;
+  auf jede Wand. Deshalb zahlen alle Vorschläge auf ihr **Thema** ein, und das
+  Thema mit der höchsten Summe gewinnt – sofern es einen Mindestanteil an
+  allen Stimmen hält. Benannt wird der Fund nach dem konkretesten Begriff darin;
   Oberbegriffe (`Theme.genericLabels`) dürfen mitstimmen, aber nie benennen.
   Sonst hieß gefühlt jeder zweite Fund „Gegenstand“.
+  **Kein Abstandstest zum zweiten Thema.** Das war der erste Versuch und ein
+  Denkfehler: Ein Holztisch ist gleichzeitig `wood` und `furniture`, beide
+  sind richtig, sie teilen sich die Stimmen – und die App schwieg, obwohl sie
+  den Tisch erkannt hatte. Der Anteil an der Gesamtsumme misst stattdessen,
+  ob überhaupt ein Signal da ist oder nur eine flache Wolke.
 - **Bestätigung über die Zeit.** Ein einzelner Durchlauf ist wacklig – dasselbe
-  Regal ist einmal Möbel, einmal Papier, einmal Holz. Ein Punkt erscheint
-  erst, wenn dasselbe Thema **dreimal hintereinander** an ungefähr derselben
-  Bildschirmstelle gewinnt, also nach etwa anderthalb Sekunden ruhigem
-  Draufhalten. Absichtlich träge: lieber ein Punkt später als drei falsche
-  sofort.
+  Regal ist einmal Möbel, einmal Papier, einmal Holz. Ein Punkt erscheint erst,
+  wenn dasselbe Thema an ungefähr derselben Bildschirmstelle genug
+  **Beobachtungsstärke** gesammelt hat: die Themensummen mehrerer Durchläufe
+  addiert, mindestens zwei. Nicht eine feste Anzahl Durchläufe – ein
+  eindeutiger Stuhl soll schneller erscheinen als eine zweifelhafte Ecke, und
+  das kann eine feste Zahl nicht unterscheiden.
 
 Der frühere Rückfall „nichts sticht hervor → ganzes Bild klassifizieren und
 Punkt in die Bildmitte“ ist **entfernt**. Er beschrieb den Raum statt eines
