@@ -29,6 +29,10 @@ struct Find: Identifiable {
     let id: String
 
     var kindLabel: String { encounter.kindLabel }
+
+    /// Was klein über dem Namen steht. Bei einem Minispiel ist die Art schon
+    /// die Überschrift – dann sagt die kleine Zeile, worum es sich handelt.
+    var subtitle: String { isMiniGame ? "Minispiel" : kindLabel }
 }
 
 /// Übersetzt einen erkannten Begriff in einen Fund.
@@ -89,6 +93,35 @@ enum FindResolver {
                     encounter: chosen.encounter,
                     isHandwritten: false,
                     id: "\(label)#\(nonce)")
+    }
+}
+
+extension FindResolver {
+
+    /// Zieht ein Minispiel aus dem globalen Vorrat.
+    ///
+    /// Ohne Bezug zum Gegenstand vor der Kamera – eine Blüte ist ein
+    /// Zwischenspiel, kein Steckbrief. Der Bezeichner bleibt je Spiel stabil,
+    /// damit die Sammlung verschiedene Spiele auch verschieden zählt.
+    static func resolveGame(avoiding lastKind: String?, nonce: Int) -> Find? {
+        let pool = MiniGameCatalog.all
+        guard !pool.isEmpty else { return nil }
+
+        let start = Int.random(in: 0..<pool.count)
+        var index = start
+        for offset in 0..<pool.count {
+            let candidate = (start + offset) % pool.count
+            if pool[candidate].encounter.kindLabel != lastKind { index = candidate; break }
+        }
+        let chosen = pool[index]
+
+        return Find(label: "spiel:\(index)",
+                    name: chosen.encounter.kindLabel,
+                    strategy: chosen.strategy,
+                    sdgs: chosen.sdgs,
+                    encounter: chosen.encounter,
+                    isHandwritten: true,
+                    id: "spiel:\(index)#\(nonce)")
     }
 }
 

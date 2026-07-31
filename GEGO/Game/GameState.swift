@@ -73,7 +73,7 @@ final class GameState: ObservableObject {
     /// den Blick durch den Raum belohnen, keine Tipparbeit.
     func registerSighting(_ label: String) {
         guard var run = hunt, !run.isExpired else { return }
-        guard Theme.forLabel(label) == run.hunt.theme else { return }
+        guard matchesHunt(label, run.hunt) else { return }
         guard label != run.credit.label else { return }   // der Ausgangspunkt zählt nicht mit
         guard !run.found.contains(label) else { return }
         run.found.insert(label)
@@ -84,6 +84,17 @@ final class GameState: ObservableObject {
         } else {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
+    }
+
+    /// Zählt dieser Begriff für die laufende Jagd?
+    private func matchesHunt(_ label: String, _ hunt: Hunt) -> Bool {
+        guard let theme = Theme.forLabel(label) else { return false }
+        if let wanted = hunt.theme { return theme == wanted }
+        if let wanted = hunt.strategy {
+            // Alles, zu dem das Spiel auf dieser Stufe etwas zu sagen hätte.
+            return theme.encounters.contains { $0.strategy == wanted }
+        }
+        return false
     }
 
     /// Prüft, ob die Zeit abgelaufen ist. Wird im Sekundentakt aus der

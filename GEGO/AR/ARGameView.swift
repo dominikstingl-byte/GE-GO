@@ -252,12 +252,19 @@ struct ARGameView: UIViewRepresentable {
                 let bloomInScene = spots.contains { $0.find.isMiniGame }
                 let wantsGame = !bloomInScene && Int.random(in: 0..<100) < gameChance
 
-                guard let find = FindResolver.resolve(label: track.label,
-                                                      theme: track.theme,
-                                                      visit: state.findings[track.label] ?? 0,
-                                                      avoiding: state.lastEncounterKind,
-                                                      nonce: nonce,
-                                                      wantsGame: wantsGame) else { continue }
+                let find: Find?
+                if wantsGame {
+                    // Ein Minispiel hat mit dem Gegenstand davor nichts zu tun.
+                    find = FindResolver.resolveGame(avoiding: state.lastEncounterKind, nonce: nonce)
+                } else {
+                    find = FindResolver.resolve(label: track.label,
+                                                theme: track.theme,
+                                                visit: state.findings[track.label] ?? 0,
+                                                avoiding: state.lastEncounterKind,
+                                                nonce: nonce,
+                                                wantsGame: false)
+                }
+                guard let find else { continue }
                 add(find, at: world, in: view)
             }
 

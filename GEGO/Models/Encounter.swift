@@ -21,6 +21,25 @@ enum Encounter {
     /// Jagd: ein Auftrag an die Kamera, der im Spiel weiterläuft statt im
     /// Blatt. Das einzige Minispiel, das AR wirklich braucht.
     case hunt(Hunt)
+    /// Kreislauf schließen: Stationen im Ring in die richtige Reihenfolge.
+    case cycle(CycleGame)
+    /// Wahr oder Falsch am Stück, mit Uhr. Bringt Tempo in ein Spiel, das
+    /// sonst durchweg bedächtig ist.
+    case trueFalse(TrueFalseRun)
+    /// Tonne treffen: Gegenstände in die richtige Abfalltonne.
+    case sorting(SortingGame)
+    /// Was passt nicht dazu?
+    case oddOne(OddOne)
+    /// Höher oder tiefer: welche Größe ist größer?
+    case higherLower(HigherLowerRun)
+    /// Zeitstrahl: wie lange braucht das in der Umwelt?
+    case timeline(TimelineGame)
+    /// Memory mit den Blütenblättern der R-Stufen.
+    case memory(MemoryGame)
+    /// Fehlersuche: welche Aussagen in dieser Szene stimmen nicht?
+    case spotErrors(SpotErrors)
+    /// Budget verteilen: hundert Punkte auf vier Maßnahmen.
+    case budget(BudgetGame)
     /// Kleine Erzählung in mehreren Absätzen. Der Vsauce-Moment: harmlose
     /// Frage, überraschende Wendung.
     case story(Story)
@@ -35,8 +54,12 @@ enum Encounter {
     /// andere zählt immer als begriffen.
     var isScored: Bool {
         switch self {
-        case .quiz, .estimate, .ordering, .duel, .hunt: return true
-        case .story, .fact, .mission, .video: return false
+        case .quiz, .estimate, .ordering, .duel, .hunt,
+             .cycle, .trueFalse, .sorting, .oddOne, .higherLower,
+             .timeline, .memory, .spotErrors, .budget:
+            return true
+        case .story, .fact, .mission, .video:
+            return false
         }
     }
 
@@ -47,6 +70,15 @@ enum Encounter {
         case .ordering: return "Reihenfolge"
         case .duel: return "Duell"
         case .hunt: return "Jagd"
+        case .cycle: return "Kreislauf"
+        case .trueFalse: return "Wahr oder falsch"
+        case .sorting: return "Tonne treffen"
+        case .oddOne: return "Ausreißer"
+        case .higherLower: return "Höher oder tiefer"
+        case .timeline: return "Zeitstrahl"
+        case .memory: return "Memory"
+        case .spotErrors: return "Fehlersuche"
+        case .budget: return "Budget"
         case .story: return "Geschichte"
         case .fact: return "Gewusst"
         case .mission: return "Auftrag"
@@ -119,11 +151,151 @@ struct Duel {
 struct Hunt {
     let prompt: String
     /// Woraus die gesuchten Dinge sein sollen.
-    let theme: Theme
-    /// Wie viele **verschiedene** Begriffe dieses Themas gefunden werden müssen.
+    let theme: Theme?
+    /// Alternativ: eine R-Stufe. Gesucht ist dann alles, zu dem das Spiel auf
+    /// dieser Stufe etwas zu sagen hätte – „finde etwas, das man reparieren
+    /// kann“ ist eine ganz andere Suchaufgabe als „finde etwas aus Holz“.
+    var strategy: RStrategy? = nil
+    /// Wie viele **verschiedene** Begriffe gefunden werden müssen.
     let count: Int
     let seconds: Int
     let reward: String
+}
+
+// MARK: - Minispiele
+//
+// Alle mit derselben Regel wie der Rest: Wo eine Zahl steht, hängt ein
+// `sourceHint` daran. Bei Serienformaten ist das je Aussage einer – das
+// vervielfacht die Prüfarbeit gegenüber einem Fun Fact, und das ist der Preis
+// für das Tempo.
+
+/// Kreislauf schließen: Stationen im Ring in die richtige Reihenfolge tippen.
+struct CycleGame {
+    let question: String
+    /// In der richtigen Reihenfolge. Die App mischt und legt sie in den Ring.
+    let stationsInOrder: [String]
+    let explanation: String
+    var sourceHint: String?
+}
+
+/// Eine Serie aus Aussagen mit Uhr. Ein Fehler beendet den Lauf.
+struct TrueFalseRun {
+    let intro: String
+    let statements: [TrueFalseItem]
+    /// Sekunden je Aussage.
+    var seconds: Int = 8
+}
+
+struct TrueFalseItem {
+    let text: String
+    let isTrue: Bool
+    let explanation: String
+    var sourceHint: String?
+}
+
+/// Gegenstände in die richtige Tonne. Das Minispiel mit dem unmittelbarsten
+/// Alltagsnutzen – wer es einmal gespielt hat, steht anders vor dem Mülleimer.
+struct SortingGame {
+    let question: String
+    let bins: [String]
+    let items: [SortingItem]
+    let explanation: String
+    var sourceHint: String?
+}
+
+struct SortingItem {
+    let name: String
+    let binIndex: Int
+    /// Warum ausgerechnet dorthin – wird bei der Auflösung gezeigt.
+    let note: String
+}
+
+/// Vier Begriffe, einer gehört nicht dazu.
+struct OddOne {
+    let question: String
+    let options: [String]
+    let oddIndex: Int
+    let explanation: String
+    var sourceHint: String?
+}
+
+/// Zwei Größen, welche ist größer. Als Kette gespielt.
+struct HigherLowerRun {
+    let intro: String
+    let pairs: [HigherLowerPair]
+}
+
+struct HigherLowerPair {
+    let question: String
+    let optionA: String
+    let optionB: String
+    /// Ob A den größeren Wert hat.
+    let aIsLarger: Bool
+    let explanation: String
+    var sourceHint: String?
+}
+
+/// Zeitstrahl: einen Gegenstand auf einer logarithmischen Skala einordnen.
+///
+/// Logarithmisch, weil die Spanne von Tagen bis Jahrhunderten reicht. Auf
+/// einem linearen Regler läge alles unter fünfzig Jahren im ersten Millimeter.
+struct TimelineGame {
+    let question: String
+    let item: String
+    /// In Tagen.
+    let answerDays: Double
+    /// Obergrenze des Reglers in Jahren. Muss über der Antwort liegen – sonst
+    /// erreicht der Regler sie nie und das Spiel ist unlösbar.
+    var maxYears: Double = 500
+    /// Wie weit man danebenliegen darf, als Faktor. 3 heißt: ein Drittel bis
+    /// das Dreifache gilt als getroffen.
+    var tolerance: Double = 3
+    let explanation: String
+    var sourceHint: String?
+}
+
+/// Memory mit den Blütenblättern. Marke und Mechanik fallen hier zusammen:
+/// Die zehn Stufen prägen sich beim Spielen ein, ohne dass jemand sie lernt.
+struct MemoryGame {
+    let intro: String
+    /// Welche Stufen mitspielen. Vier Paare sind ein gutes Maß.
+    let strategies: [RStrategy]
+    let explanation: String
+}
+
+/// Eine Alltagsszene und mehrere Aussagen dazu – manche stimmen nicht.
+struct SpotErrors {
+    let scene: String
+    let question: String
+    let statements: [ErrorStatement]
+    let explanation: String
+    var sourceHint: String?
+}
+
+struct ErrorStatement {
+    let text: String
+    /// Ob die Aussage falsch ist – die falschen sind die gesuchten.
+    let isWrong: Bool
+}
+
+/// Hundert Punkte auf mehrere Maßnahmen verteilen.
+///
+/// Das inhaltlich stärkste Format: Es transportiert genau die Botschaft, um
+/// die es geht – dass Mülltrennen und Flugverzicht nicht dasselbe Gewicht
+/// haben. Und es ist das einzige, bei dem die Auflösung eine Rangfolge
+/// **beziffert**, was die Prüfarbeit entsprechend erhöht.
+struct BudgetGame {
+    let question: String
+    let options: [BudgetOption]
+    let explanation: String
+    var sourceHint: String?
+}
+
+struct BudgetOption {
+    let name: String
+    /// Wirksamkeit als Anteil, alle zusammen 1,0.
+    let weight: Double
+    let note: String
 }
 
 /// Mehrere kurze Absätze, die aufeinander aufbauen. Der letzte soll sitzen.

@@ -46,13 +46,27 @@ struct EncounterView: View {
             DuelStage(duel: duel) { finish(mastered: $0) }
         case .hunt(let hunt):
             HuntStage(hunt: hunt) { accepted in
-                if accepted {
-                    state.startHunt(hunt, credit: find)
-                    dismiss()
-                } else {
-                    dismiss()
-                }
+                if accepted { state.startHunt(hunt, credit: find) }
+                dismiss()
             }
+        case .cycle(let game):
+            CycleStage(game: game) { finish(mastered: $0) }
+        case .trueFalse(let run):
+            TrueFalseStage(run: run) { finish(mastered: $0) }
+        case .sorting(let game):
+            SortingStage(game: game) { finish(mastered: $0) }
+        case .oddOne(let game):
+            OddOneStage(game: game) { finish(mastered: $0) }
+        case .higherLower(let run):
+            HigherLowerStage(run: run) { finish(mastered: $0) }
+        case .timeline(let game):
+            TimelineStage(game: game) { finish(mastered: $0) }
+        case .memory(let game):
+            MemoryStage(game: game) { finish(mastered: $0) }
+        case .spotErrors(let game):
+            SpotErrorsStage(game: game) { finish(mastered: $0) }
+        case .budget(let game):
+            BudgetStage(game: game) { finish(mastered: $0) }
         case .story(let story):
             StoryStage(story: story) { finish(mastered: true) }
         case .fact(let fact):
@@ -75,7 +89,7 @@ struct EncounterView: View {
                 Text("\(find.strategy.code) · \(find.strategy.title)")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text(find.kindLabel)
+                Text(find.subtitle)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Palette.textSecondary)
             }
@@ -664,7 +678,7 @@ private struct VideoStage: View {
 
 // MARK: - Gemeinsame Bausteine
 
-private struct Resolution: View {
+struct Resolution: View {
     let title: String
     let text: String
     var sourceHint: String?
@@ -688,7 +702,7 @@ private struct Resolution: View {
 
 /// Merkzettel, keine Quellenangabe. Steht bewusst sichtbar in der App,
 /// solange die Inhalte Entwürfe sind.
-private struct SourceNote: View {
+struct SourceNote: View {
     let hint: String
 
     var body: some View {

@@ -196,7 +196,16 @@ Gewertet („begriffen“) werden nur die, bei denen man etwas falsch machen kan
 | `estimate` | ja | Schätzung am Schieberegler |
 | `ordering` | ja | Rangfolge durch Antippen in Reihenfolge |
 | `duel` | ja | Zwei Möglichkeiten, eine Entscheidung |
-| `hunt` | ja | Auftrag an die Kamera, läuft im Spiel weiter |
+| `hunt` | ja | Auftrag an die Kamera, nach Thema **oder** R-Stufe |
+| `cycle` | ja | Stationen im Ring in die richtige Reihenfolge |
+| `trueFalse` | ja | Serie mit Uhr, ein Fehler beendet den Lauf |
+| `sorting` | ja | Gegenstände in die richtige Abfalltonne |
+| `oddOne` | ja | Vier Begriffe, einer gehört nicht dazu |
+| `higherLower` | ja | Kette von Größenvergleichen |
+| `timeline` | ja | Zerfallszeit auf logarithmischer Skala |
+| `memory` | ja | Kartenpaare aus Blatt und Bedeutung |
+| `spotErrors` | ja | Alltagsszene, welche Aussagen stimmen nicht |
+| `budget` | ja | Hundert Punkte auf mehrere Maßnahmen verteilen |
 | `story` | nein | Mehrere Absätze, der letzte soll sitzen |
 | `fact` | nein | Ein Gedanke zum Mitnehmen |
 | `mission` | nein* | Auftrag für die echte Welt |
@@ -210,10 +219,19 @@ den Spieler los („Finde noch zwei Dinge aus Holz“) und wird von der Erkennun
 abgenommen, nicht durch Antippen. Sie läuft als Leiste im HUD weiter, während
 das Blatt schon zu ist. Der Ausgangsgegenstand zählt nicht mit.
 
-**Ideen für weitere Minispiele**, noch nicht gebaut: Zuordnungspaare
-(Gegenstand → Zerfallszeit), Schnellrunde mit mehreren Duellen unter
-Zeitdruck, und eine Jagdvariante, die nicht nach einem Thema fragt, sondern
-nach einer R-Stufe („Finde etwas, das man reparieren kann“).
+**Zwei Vorräte.** Themeninhalte hängen am Gegenstand und stehen in
+`ThemeContent+…`. Minispiele hängen an nichts und stehen in
+`MiniGameCatalog` – eine Blüte kann überall auftauchen, und was darin steckt,
+hat mit dem Stuhl davor nichts zu tun. Das ist Absicht: Ein Minispiel ist ein
+Zwischenspiel, kein Steckbrief.
+
+**Sichtbar unterschieden:** einzelnes Blatt für Wissen, ganze Blüte fürs
+Minispiel. Die Blüte dreht sich langsam, und es gibt immer nur eine
+gleichzeitig in der Szene – sonst nutzt sich das Besondere ab. Etwa jeder
+vierte Fundpunkt wird eine.
+
+**Beim Zeitstrahl** muss `maxYears` über der Antwort liegen, sonst erreicht
+der Regler sie nie und das Spiel ist unlösbar. Ist einmal passiert.
 
 ## Diagnoseblatt
 
