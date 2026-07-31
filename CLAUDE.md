@@ -40,9 +40,8 @@ Aus der Konzeptrunde, nicht neu aufrollen:
 - **R-Strategien (R0–R9) sind die Mechanik**, die SDGs der Rahmen darüber.
 - **Sammlung als Langzeitmotivation** – zehn Stufen, die sich füllen. Keine
   Streaks, keine Level. Eine Stufe geht auf, wenn **drei verschiedene**
-  Gegenstände dieser Stufe begriffen wurden (weniger, wenn der Katalog für
-  die Stufe nicht mehr hergibt). Ein Fund je Stufe wäre nach einer halben
-  Sitzung erledigt.
+  Gegenstände dieser Stufe begriffen wurden. Ein Fund je Stufe wäre nach einer
+  halben Sitzung erledigt.
 - **Die Sammlung ist die Blüte aus dem Gut-Einern-Logo.** Das Logo hat genau
   zehn Formen – neun bunte Blätter im Ring plus die graue Klinge – und damit
   eine je R-Stufe. Die Zuordnung ist nicht frei gewählt: Die Blätter laufen im
@@ -85,7 +84,7 @@ Lücke zu füllen. Lieber die Aussage weglassen.
 GEGO/
   App/            GEGOApp, RootView (Kameraerlaubnis, HUD, Jagdleiste, Blätter)
   AR/             ARGameView – Kamerabild, Fundpunkte setzen, Antippen
-  Vision/         SceneRecognizer – Erkennung in zwei Schritten
+  Vision/         SceneRecognizer – Erkennung und Themenabstimmung
   Models/         RStrategy, SDG, Encounter, ObjectCatalog (Handkatalog),
                   Themes + ThemeContent+… (Themennetz), ThemeMapping
                   (erzeugt), Find (löst Begriff → Fund auf)
