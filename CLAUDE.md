@@ -112,10 +112,40 @@ zieht sie aus `Tools/GutEinern_Logo.png` und gibt sie als Punktlisten aus, die
 von Hand nach `Bloom.swift` wandern. Wer die Formen ändern will, ändert das
 Logo und lässt das Werkzeug neu laufen – nicht die Zahlen im Code.
 
-**Erkennung in drei Schritten**, weil die eingebaute Klassifikation nur sagt,
+**Erkennung in fünf Schritten**, weil die eingebaute Klassifikation nur sagt,
 *was* im Bild ist, nicht *wo*: auffällige Bereiche finden (Saliency) →
-Zuschnitt einzeln klassifizieren → per Strahl im Raum verankern. Ausgewertet
+Zuschnitt einzeln klassifizieren → **über das Thema abstimmen** → **über
+mehrere Durchläufe bestätigen** → per Strahl im Raum verankern. Ausgewertet
 wird zweimal pro Sekunde, nicht in jedem Bild.
+
+Die beiden mittleren Schritte sind aus dem ersten Innenraumtest entstanden, in
+dem zu viele Punkte kamen und fast alle falsch waren:
+
+- **Abstimmung statt bester Begriff.** Die Taxonomie ist hierarchisch, und
+  drinnen gewinnen fast immer die Wurzeln: `material`, `structure`,
+  `interior_room`, `textile`. Sie sind nicht falsch, nur wertlos – sie passen
+  auf jede Wand. Deshalb zahlen alle Vorschläge auf ihr **Thema** ein, das
+  Thema mit der höchsten Summe gewinnt, und es muss deutlich vor dem zweiten
+  liegen. Benannt wird der Fund nach dem konkretesten Begriff darin;
+  Oberbegriffe (`Theme.genericLabels`) dürfen mitstimmen, aber nie benennen.
+  Sonst hieß gefühlt jeder zweite Fund „Gegenstand“.
+- **Bestätigung über die Zeit.** Ein einzelner Durchlauf ist wacklig – dasselbe
+  Regal ist einmal Möbel, einmal Papier, einmal Holz. Ein Punkt erscheint
+  erst, wenn dasselbe Thema **dreimal hintereinander** an ungefähr derselben
+  Bildschirmstelle gewinnt, also nach etwa anderthalb Sekunden ruhigem
+  Draufhalten. Absichtlich träge: lieber ein Punkt später als drei falsche
+  sofort.
+
+Der frühere Rückfall „nichts sticht hervor → ganzes Bild klassifizieren und
+Punkt in die Bildmitte“ ist **entfernt**. Er beschrieb den Raum statt eines
+Gegenstands und war drinnen die ergiebigste Unsinnsquelle.
+
+**Fundpunkte sind Geometrie, keine Textur.** Der erste Versuch legte ein Blatt
+mit Alphakanal auf eine quadratische Fläche – am Gerät stand ein schwarzes
+Rechteck drumherum, weil Transparenz in RealityKit an Material, Blending und
+Texturerzeugung gleichzeitig hängt. `PetalMesh` trianguliert stattdessen die
+Kontur (Ohrenschneiden). Da gibt es kein Drumherum, das sichtbar werden
+könnte.
 
 **Neue Gegenstände** nur mit Begriffen aus `Tools/begriffe.txt`. Erfundene
 Bezeichner werfen keinen Fehler – sie tauchen im Spiel einfach nie auf.
@@ -188,8 +218,11 @@ Stand: baut, aber noch nie auf einem Gerät gelaufen.
    (`screenPoint(for:transform:viewport:)`). Verdacht: Die Vision-Kästen liegen
    im bereits nach `.right` gedrehten Raum, `displayTransform` erwartet aber
    den ungedrehten. Erst am Rahmen-Overlay ansehen, dann ändern.
-3. **Erkennungsschwelle geraten** – Startwert 0,12, am Gerät über das
-   Diagnoseblatt einstellbar. Der gefundene Wert gehört zurück in den Code.
+3. **Annahmeschwellen geraten** – Mindestsumme je Thema 0,30 und Abstand zum
+   zweiten Thema 1,6×, beide am Gerät über das Diagnoseblatt einstellbar. Die
+   gefundenen Werte gehören zurück in den Code (`SceneRecognizer`). Ebenso die
+   Zahl der nötigen Bestätigungen (`requiredHits`, aktuell 3) – die ist noch
+   nicht am Regler, weil erst die Schwellen sitzen sollten.
 4. **Alle Inhalte unbelegt.** Jeder `sourceHint` muss abgearbeitet werden –
    inzwischen sind es über hundert. Das ist die größte offene Arbeit am
    Projekt und die einzige, die nicht Claude erledigen kann.

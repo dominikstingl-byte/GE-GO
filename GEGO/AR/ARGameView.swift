@@ -32,14 +32,28 @@ struct ARGameView: UIViewRepresentable {
 
     final class Coordinator: NSObject, ARSessionDelegate {
 
-        /// Ein gesetzter Fundpunkt samt seinem Anker, damit er sich wieder
-        /// entfernen lässt.
+        /// Ein gesetzter Fundpunkt samt seinem Anker.
         private struct Spot {
             let find: Find
             let position: SIMD3<Float>
             let anchor: AnchorEntity
-            let petal: ModelEntity
+            let petal: Entity
             var label: String { find.label }
+        }
+
+        /// Eine Vermutung, die noch reifen muss.
+        ///
+        /// Ein einzelner Durchlauf der Klassifikation ist wacklig: Dasselbe
+        /// Regal ist einmal Möbel, einmal Papier, einmal Holz. Erst wenn
+        /// dasselbe Thema mehrfach hintereinander an ungefähr derselben Stelle
+        /// gewinnt, ist es eine Beobachtung und keine Zuckung.
+        private struct Track {
+            let theme: Theme
+            var label: String
+            var point: CGPoint
+            var hits: Int
+            var lastSeen: TimeInterval
+            var placed = false
         }
 
         private let state: GameState
@@ -48,40 +62,49 @@ struct ARGameView: UIViewRepresentable {
 
         private weak var view: ARView?
         private var spots: [Spot] = []
+        private var tracks: [Track] = []
         private var isBusy = false
         private var lastRun: TimeInterval = 0
         private var elapsed: Float = 0
         private var sceneUpdates: Cancellable?
-
-        /// Blätter, die gerade verbucht wurden, kommen kurz nicht wieder – sonst
-        /// steht der Punkt sofort erneut da und der Fund fühlt sich folgenlos an.
-        private var cooldown: [String: TimeInterval] = [:]
-        private let cooldownSeconds: TimeInterval = 20
-
-        /// Die Blatttexturen werden einmal gebaut und dann geteilt.
-        private var textures: [RStrategy: TextureResource] = [:]
-
-        /// Macht die Kennung jedes Fundpunkts eindeutig, auch wenn derselbe
-        /// Begriff mehrfach in der Szene steht.
         private var nonce = 0
 
-        /// Wie oft pro Sekunde ausgewertet wird. Jedes Bild zu analysieren
-        /// würde nichts verbessern, aber Akku und Wärme deutlich verschlechtern.
+        /// Netze werden einmal gebaut und geteilt.
+        private var meshes: [RStrategy: (fill: MeshResource, rim: MeshResource)] = [:]
+
+        /// Blätter, die gerade verbucht wurden, kommen kurz nicht wieder.
+        private var cooldown: [String: TimeInterval] = [:]
+        private let cooldownSeconds: TimeInterval = 25
+
+        /// Zweimal pro Sekunde auswerten. Jedes Bild zu analysieren würde
+        /// nichts verbessern, aber Akku und Wärme deutlich verschlechtern.
         private let interval: TimeInterval = 0.5
 
-        /// Mehr Punkte gleichzeitig machen die Szene unübersichtlich.
-        private let maximumSpots = 12
+        /// Wie oft ein Thema bestätigt sein muss, bevor ein Punkt erscheint.
+        /// Bei einem halben Takt Abstand heißt drei: etwa anderthalb Sekunden
+        /// ruhig draufhalten. Das ist absichtlich träge – lieber ein Punkt
+        /// später als drei falsche sofort.
+        private let requiredHits = 3
+
+        /// Wie weit eine Beobachtung wandern darf und noch als dieselbe gilt,
+        /// als Anteil der Bildschirmbreite. Großzügig, weil die Kamera wackelt.
+        private let trackRadius: CGFloat = 0.18
+
+        /// Nach so langer Pause ist eine Vermutung vergessen.
+        private let trackMemory: TimeInterval = 2.5
+
+        /// Wenige Punkte gleichzeitig. Ein zugepflasterter Bildschirm ist
+        /// unbrauchbar, auch wenn jeder einzelne Punkt stimmt.
+        private let maximumSpots = 6
 
         /// Zwei Punkte desselben Gegenstands dürfen nicht dichter beieinander
-        /// stehen als das – sonst pflastert ein einzelner Stuhl den Raum zu.
-        private let minimumDistance: Float = 1.2
+        /// stehen als das.
+        private let minimumDistance: Float = 1.5
 
         init(state: GameState) {
             self.state = state
             super.init()
 
-            // Der Punkt verschwindet erst, wenn der Fund wirklich verbucht ist.
-            // Vorher entfernt hieße: „Später“ tippen und der Gegenstand ist weg.
             state.onFindingRecorded = { [weak self] label in
                 guard let self, let view else { return }
                 remove(label, in: view)
@@ -98,10 +121,6 @@ struct ARGameView: UIViewRepresentable {
 
         // MARK: Lebendigkeit
 
-        /// Blätter sind flach. Ohne diese Schleife stünden sie irgendwo im Raum
-        /// herum und wären von der Seite unsichtbar – also drehen sie sich zur
-        /// Kamera, atmen leicht und wachsen mit der Entfernung mit, damit ein
-        /// Punkt in fünf Metern nicht zum Staubkorn wird.
         private func tick(delta: Float) {
             guard let view, !spots.isEmpty else { return }
             elapsed += delta
@@ -131,7 +150,8 @@ struct ARGameView: UIViewRepresentable {
             let buffer = frame.capturedImage
             let viewport = view.bounds.size
             let transform = frame.displayTransform(for: .portrait, viewportSize: viewport)
-            recognizer.minimumConfidence = state.minimumConfidence
+            recognizer.minimumThemeScore = state.minimumThemeScore
+            recognizer.minimumMargin = state.minimumMargin
             recognizer.collectsDiagnostics = state.diagnosticsEnabled
 
             queue.async { [weak self] in
@@ -152,58 +172,76 @@ struct ARGameView: UIViewRepresentable {
 
             if state.diagnosticsEnabled {
                 state.rawCandidates = report.raw
+                state.themeScores = report.themeScores
+                state.lastRejection = report.rejections.first
                 state.debugBoxes = report.sightings.map {
                     screenRect(for: $0.boundingBox, transform: transform, viewport: viewport)
                 }
             }
 
-            var rejections: [String] = []
+            tracks.removeAll { now - $0.lastSeen > trackMemory }
+
+            let radius = viewport.width * trackRadius
 
             for sighting in report.sightings {
-                // Jede Sichtung zählt für eine laufende Jagd, auch wenn daraus
-                // gerade kein Fundpunkt wird.
-                state.registerSighting(sighting.label)
-
-                if let until = cooldown[sighting.label], now < until {
-                    rejections.append("\(sighting.label): eben erst gefunden")
-                    continue
-                }
-
                 let point = screenPoint(for: sighting.boundingBox, transform: transform, viewport: viewport)
-                guard viewport.contains(point) else {
-                    rejections.append("\(sighting.label): Punkt außerhalb des Bildes – Umrechnung prüfen")
-                    continue
+                guard viewport.contains(point) else { continue }
+
+                if let index = tracks.firstIndex(where: {
+                    $0.theme == sighting.theme && hypot($0.point.x - point.x, $0.point.y - point.y) < radius
+                }) {
+                    tracks[index].hits += 1
+                    tracks[index].lastSeen = now
+                    // Der Punkt wandert mit, damit ein langsamer Schwenk die
+                    // Beobachtung nicht abreißen lässt.
+                    tracks[index].point = CGPoint(x: (tracks[index].point.x + point.x) / 2,
+                                                  y: (tracks[index].point.y + point.y) / 2)
+                    tracks[index].label = sighting.label
+                } else {
+                    tracks.append(Track(theme: sighting.theme, label: sighting.label,
+                                        point: point, hits: 1, lastSeen: now))
                 }
-                guard let world = worldPosition(at: point, in: view) else {
-                    rejections.append("\(sighting.label): kein Halt im Raum")
-                    continue
-                }
+            }
+
+            for index in tracks.indices where tracks[index].hits >= requiredHits && !tracks[index].placed {
+                tracks[index].placed = true
+                let track = tracks[index]
+
+                // Erst jetzt zählt es für eine laufende Jagd. Eine Jagd auf
+                // Zuckungen wäre keine Beobachtungsaufgabe.
+                state.registerSighting(track.label)
+
+                if let until = cooldown[track.label], now < until { continue }
+                guard let world = worldPosition(at: track.point, in: view) else { continue }
 
                 let tooClose = spots.contains {
-                    $0.label == sighting.label && simd_distance($0.position, world) < minimumDistance
+                    $0.label == track.label && simd_distance($0.position, world) < minimumDistance
                 }
                 guard !tooClose else { continue }
 
                 nonce += 1
-                guard let find = FindResolver.resolve(label: sighting.label,
-                                                      visit: state.findings[sighting.label] ?? 0,
+                guard let find = FindResolver.resolve(label: track.label,
+                                                      theme: track.theme,
+                                                      visit: state.findings[track.label] ?? 0,
                                                       avoiding: state.lastEncounterKind,
-                                                      nonce: nonce) else {
-                    rejections.append("\(sighting.label): kein Inhalt hinterlegt")
-                    continue
-                }
-
+                                                      nonce: nonce) else { continue }
                 add(find, at: world, in: view)
             }
 
-            if state.diagnosticsEnabled {
-                state.lastRejection = rejections.first
-            }
-
             state.spotCount = spots.count
-            state.status = spots.isEmpty
-                ? "Halt die Kamera auf deine Umgebung"
-                : "\(spots.count) \(spots.count == 1 ? "Fundpunkt" : "Fundpunkte") in Sicht"
+            state.status = statusText(report)
+        }
+
+        /// Sagt, woran es gerade liegt. Ein stummer Bildschirm ohne Erklärung
+        /// ist die schlechteste Rückmeldung, die eine Kamera-App geben kann.
+        private func statusText(_ report: RecognitionReport) -> String {
+            if !spots.isEmpty {
+                return "\(spots.count) \(spots.count == 1 ? "Fundpunkt" : "Fundpunkte") in Sicht"
+            }
+            let reifend = tracks.filter { !$0.placed }.count
+            if reifend > 0 { return "Halt drauf …" }
+            if report.regionCount == 0 { return "Halt auf einen einzelnen Gegenstand" }
+            return "Suche …"
         }
 
         /// Rechnet einen Vision-Kasten in einen Punkt auf dem Bildschirm um.
@@ -228,8 +266,8 @@ struct ARGameView: UIViewRepresentable {
         }
 
         /// Sucht den Ort im Raum hinter einem Bildschirmpunkt. Trifft der Strahl
-        /// keine erkannte Fläche, wird der Punkt einfach zwei Meter vor die
-        /// Kamera gehängt – lieber ungenau als gar nicht.
+        /// keine erkannte Fläche, wird der Punkt zwei Meter vor die Kamera
+        /// gehängt – lieber ungenau als gar nicht.
         private func worldPosition(at point: CGPoint, in view: ARView) -> SIMD3<Float>? {
             if let query = view.makeRaycastQuery(from: point, allowing: .estimatedPlane, alignment: .any),
                let hit = view.session.raycast(query).first {
@@ -243,34 +281,37 @@ struct ARGameView: UIViewRepresentable {
 
         // MARK: Der Fundpunkt selbst
 
-        private func texture(for strategy: RStrategy) -> TextureResource? {
-            if let cached = textures[strategy] { return cached }
-            guard let cg = Bloom.texture(for: strategy).cgImage else { return nil }
-            guard let resource = try? TextureResource.generate(
-                from: cg, options: .init(semantic: .color)) else { return nil }
-            textures[strategy] = resource
-            return resource
+        private func mesh(for strategy: RStrategy) -> (fill: MeshResource, rim: MeshResource)? {
+            if let cached = meshes[strategy] { return cached }
+            guard let fill = PetalMesh.generate(for: strategy, size: 0.16),
+                  let rim = PetalMesh.generate(for: strategy, size: 0.16, inflate: 0.16) else { return nil }
+            meshes[strategy] = (fill, rim)
+            return (fill, rim)
         }
 
         private func add(_ find: Find, at position: SIMD3<Float>, in view: ARView) {
-            let side: Float = 0.18
-            var material = UnlitMaterial()
-            if let texture = texture(for: find.strategy) {
-                // Der Weißton mit knapp unter voller Deckkraft ist der Schalter,
-                // der in RealityKit die Transparenz der Textur überhaupt erst
-                // durchlässt – sonst steht das Blatt auf einem schwarzen Quadrat.
-                material.color = .init(tint: .white.withAlphaComponent(0.999), texture: .init(texture))
-            } else {
-                material.color = .init(tint: UIColor(find.strategy.brandColor))
-            }
-            // Rückseiten müssen nicht behandelt werden: Das Blatt dreht sich in
-            // `tick` ohnehin jede Bildwiederholung zur Kamera.
+            guard let mesh = mesh(for: find.strategy) else { return }
 
-            let petal = ModelEntity(mesh: .generatePlane(width: side, height: side),
-                                    materials: [material])
+            // Heller Umriss dahinter, minimal größer. Vor einem Kamerabild kann
+            // jede Farbe auf jeder Farbe landen; ohne Kante verschwindet ein
+            // dunkles Blatt vor einer dunklen Wand.
+            let rim = ModelEntity(mesh: mesh.rim,
+                                  materials: [UnlitMaterial(color: .white)])
+            rim.position.z = -0.002
+
+            let fill = ModelEntity(mesh: mesh.fill,
+                                   materials: [UnlitMaterial(color: UIColor(find.strategy.brandColor))])
+
+            let petal = Entity()
+            petal.addChild(rim)
+            petal.addChild(fill)
             petal.name = find.id
+
             // Trefferfeld als Kugel: Auf eine papierdünne Fläche zielt niemand.
-            petal.collision = CollisionComponent(shapes: [.generateSphere(radius: side * 0.55)])
+            let target = ModelEntity()
+            target.name = find.id
+            target.collision = CollisionComponent(shapes: [.generateSphere(radius: 0.10)])
+            petal.addChild(target)
 
             let anchor = AnchorEntity(world: position)
             anchor.addChild(petal)
@@ -299,7 +340,7 @@ struct ARGameView: UIViewRepresentable {
             guard let view else { return }
             let point = sender.location(in: view)
             guard let entity = view.entity(at: point),
-                  let spot = spots.first(where: { $0.petal.name == entity.name }) else { return }
+                  let spot = spots.first(where: { $0.find.id == entity.name }) else { return }
 
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             state.activeFind = spot.find

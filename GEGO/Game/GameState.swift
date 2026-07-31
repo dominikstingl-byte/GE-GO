@@ -111,13 +111,18 @@ final class GameState: ObservableObject {
 
     /// Das Diagnoseblatt am Gerät. Im normalen Spiel aus.
     @Published var diagnosticsEnabled = false {
-        didSet { if !diagnosticsEnabled { rawCandidates = []; debugBoxes = [] } }
+        didSet { if !diagnosticsEnabled { rawCandidates = []; themeScores = []; debugBoxes = [] } }
     }
 
     @Published var rawCandidates: [RawCandidate] = []
+    @Published var themeScores: [ThemeScore] = []
     @Published var debugBoxes: [CGRect] = []
-    @Published var minimumConfidence: Float = 0.12
     @Published var lastRejection: String?
+
+    /// Die beiden Schrauben, an denen im Innenraum wirklich gedreht wird.
+    /// Beides Vermutungen – belastbar wird das erst am Gerät.
+    @Published var minimumThemeScore: Float = 0.30
+    @Published var minimumMargin: Float = 1.6
 
     // MARK: Sammlung
 

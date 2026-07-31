@@ -44,7 +44,8 @@ enum FindResolver {
     /// zuletzt gezeigte Art. Beides zusammen sorgt dafür, dass ein Holzboden
     /// beim zweiten Antippen etwas anderes erzählt als beim ersten – und nicht
     /// zweimal hintereinander dasselbe Format bringt.
-    static func resolve(label: String, visit: Int, avoiding lastKind: String?, nonce: Int = 0) -> Find? {
+    static func resolve(label: String, theme knownTheme: Theme? = nil,
+                        visit: Int, avoiding lastKind: String?, nonce: Int = 0) -> Find? {
         if let entry = ObjectCatalog.entry(for: label) {
             let encounter = entry.encounter(forVisit: visit, avoiding: lastKind)
             return Find(label: label,
@@ -56,7 +57,9 @@ enum FindResolver {
                         id: "\(label)#\(nonce)")
         }
 
-        guard let theme = Theme.forLabel(label) else { return nil }
+        // Das Thema kommt aus der Abstimmung über alle Vorschläge und ist
+        // belastbarer als eine Ableitung aus dem einen Begriff.
+        guard let theme = knownTheme ?? Theme.forLabel(label) else { return nil }
         let pool = theme.encounters
         guard !pool.isEmpty else { return nil }
 

@@ -165,4 +165,24 @@ enum Theme: String, CaseIterable, Identifiable {
         if ThemeMapping.excluded.contains(label) { return nil }
         return ThemeMapping.byLabel[label] ?? .stuff
     }
+
+    /// Begriffe, die eine Szene beschreiben statt eines Gegenstands.
+    ///
+    /// Die Taxonomie ist hierarchisch, und die Wurzeln passen auf alles: Eine
+    /// Wand ist `material`, ein Zimmer ist `interior_room`, jede Fläche ist
+    /// `structure`. Drinnen gewinnen genau diese Begriffe fast immer, weil das
+    /// Bild überwiegend aus Wand, Boden und Möbelrücken besteht.
+    ///
+    /// Sie dürfen für ein Thema stimmen – ein `furniture` unter fünf
+    /// Stuhlvarianten ist ein gutes Argument. Aber sie dürfen einen Fund nicht
+    /// **benennen**, sonst heißt gefühlt jeder zweite Fund „Gegenstand“.
+    static let genericLabels: Set<String> = [
+        "material", "structure", "object", "thing", "pattern", "texture",
+        "interior_room", "interior_shop", "domicile", "outdoor", "land",
+        "landscape", "liquid", "light", "decoration", "machine", "housewares",
+        "conveyance", "container", "art", "media", "recreation", "sport",
+        "games", "music", "performance", "celebration", "daytime", "frozen"
+    ]
+
+    static func isGeneric(_ label: String) -> Bool { genericLabels.contains(label) }
 }
