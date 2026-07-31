@@ -53,6 +53,23 @@ extension UIColor {
             alpha: 1
         )
     }
+
+    /// Hebt oder senkt die Helligkeit, bis die Farbe vor dem jeweiligen
+    /// Untergrund lesbar wird. Der Farbton bleibt, nur der Wert wandert –
+    /// so bleibt ein Markenton als Markenton erkennbar.
+    func withBrightness(atLeast floor: CGFloat) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return self }
+        guard b < floor else { return self }
+        return UIColor(hue: h, saturation: s * 0.9, brightness: floor, alpha: a)
+    }
+
+    func withBrightness(atMost ceiling: CGFloat) -> UIColor {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getHue(&h, saturation: &s, brightness: &b, alpha: &a) else { return self }
+        guard b > ceiling else { return self }
+        return UIColor(hue: h, saturation: min(1, s * 1.05), brightness: ceiling, alpha: a)
+    }
 }
 
 /// Abstände in festen Stufen, damit das Layout ruhig bleibt.

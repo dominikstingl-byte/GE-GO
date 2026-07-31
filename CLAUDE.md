@@ -23,11 +23,35 @@ Aus der Konzeptrunde, nicht neu aufrollen:
 - **Punkte auf erkannten Gegenständen**, nicht an GPS-Orten. Keine Karte.
 - **Nur Bordmittel zur Erkennung.** Kein eigenes Modell, keine Trainingsdaten.
   Die 1303 verfügbaren Begriffe stehen in `Tools/begriffe.txt`.
+- **Alles, was das iPhone erkennt, ist auch spielbar.** Zwei Ebenen: der
+  Handkatalog (`ObjectCatalog`) für ausgearbeitete Einzelgegenstände, darunter
+  das Themennetz (`Themes` + `ThemeMapping`) als Auffang für den Rest. Jeder
+  der 1303 Begriffe ist zugeordnet, unbekannte Begriffe künftiger iOS-Fassungen
+  landen in `.stuff`. Ausgenommen sind bewusst 95 Begriffe – Menschen vor
+  allem. Ein Spiel, das einen Nachhaltigkeitstipp auf einen Menschen klebt,
+  ist übergriffig, egal wie gut der Tipp ist.
+- **Die R-Stufe hängt an der Begegnung, nicht am Gegenstand.** Deshalb erzählt
+  ein Holzboden beim ersten Antippen vom Reparieren, beim zweiten vom
+  Umwidmen, beim dritten vom Verwerten – und zahlt nacheinander auf
+  verschiedene Blätter ein. Jedes Thema hat 6–8 Begegnungen mit durchweg
+  verschiedenen R-Stufen und ohne zwei gleiche Formate hintereinander.
 - **Drinnen wie draußen spielbar.** Innenraum ist in der Begriffsliste sogar
   besser abgedeckt.
 - **R-Strategien (R0–R9) sind die Mechanik**, die SDGs der Rahmen darüber.
 - **Sammlung als Langzeitmotivation** – zehn Stufen, die sich füllen. Keine
-  Streaks, keine Level.
+  Streaks, keine Level. Eine Stufe geht auf, wenn **drei verschiedene**
+  Gegenstände dieser Stufe begriffen wurden (weniger, wenn der Katalog für
+  die Stufe nicht mehr hergibt). Ein Fund je Stufe wäre nach einer halben
+  Sitzung erledigt.
+- **Die Sammlung ist die Blüte aus dem Gut-Einern-Logo.** Das Logo hat genau
+  zehn Formen – neun bunte Blätter im Ring plus die graue Klinge – und damit
+  eine je R-Stufe. Die Zuordnung ist nicht frei gewählt: Die Blätter laufen im
+  Logo gegen den Uhrzeigersinn durch das Spektrum, von Violett über Grün bis
+  Dunkelrot; in dieser Reihenfolge tragen sie R0 bis R8. Die graue Klinge
+  fällt aus der Reihe und schließt den Ring – sie trägt R9 „Energie
+  zurückholen“, die Stufe, auf der nur noch Verbrennen übrig bleibt.
+  Fundpunkte in AR sind das Blatt ihrer Stufe, die Sammlung ist die Blüte,
+  die sich schließt. Nicht umfärben, nicht umsortieren.
 - **Einzelspieler, alles auf dem Gerät.** Kein Konto, kein Server, keine
   Bilder verlassen das iPhone.
 - **Zielgruppe ab 16.** Erspart die DSGVO-Sonderregeln für Minderjährige.
@@ -59,15 +83,34 @@ Lücke zu füllen. Lieber die Aussage weglassen.
 
 ```
 GEGO/
-  App/            GEGOApp, RootView (Kameraerlaubnis, HUD, Blätter)
+  App/            GEGOApp, RootView (Kameraerlaubnis, HUD, Jagdleiste, Blätter)
   AR/             ARGameView – Kamerabild, Fundpunkte setzen, Antippen
   Vision/         SceneRecognizer – Erkennung in zwei Schritten
-  Models/         RStrategy, SDG, Encounter, ObjectCatalog
-  Game/           GameState – Fortschritt, Sammlung, UserDefaults
-  Views/          EncounterView, CollectionView
-  DesignSystem/   Theme (kopiert aus Danach)
+  Models/         RStrategy, SDG, Encounter, ObjectCatalog (Handkatalog),
+                  Themes + ThemeContent+… (Themennetz), ThemeMapping
+                  (erzeugt), Find (löst Begriff → Fund auf)
+  Game/           GameState – Fortschritt, Sammlung, Jagd, UserDefaults
+  Views/          EncounterView, CollectionView, DiagnosticsView
+  DesignSystem/   Theme (kopiert aus Danach), Bloom (Blätter aus dem Logo)
 Tools/            begriffe.txt + taxonomie.swift
+                  GutEinern_Logo.png + kontur.swift
+                  themen.swift (erzeugt ThemeMapping.swift)
 ```
+
+Zwei Dateien sind erzeugt und werden nicht von Hand geändert:
+
+```bash
+swift Tools/taxonomie.swift > Tools/begriffe.txt      # nur mit Xcode/macOS
+swift Tools/themen.swift    > GEGO/Models/ThemeMapping.swift
+```
+
+`themen.swift` meldet auf stderr, was ohne Thema durchfällt. Diese Liste
+gehört abgearbeitet, nicht ignoriert – aktuell ist sie leer.
+
+**Die Blattkonturen sind ausgelesen, nicht nachgezeichnet.** `Tools/kontur.swift`
+zieht sie aus `Tools/GutEinern_Logo.png` und gibt sie als Punktlisten aus, die
+von Hand nach `Bloom.swift` wandern. Wer die Formen ändern will, ändert das
+Logo und lässt das Werkzeug neu laufen – nicht die Zahlen im Code.
 
 **Erkennung in drei Schritten**, weil die eingebaute Klassifikation nur sagt,
 *was* im Bild ist, nicht *wo*: auffällige Bereiche finden (Saliency) →
@@ -91,18 +134,69 @@ Sensoren. Prüfen ohne Gerät:
 xcodebuild -project GEGO.xcodeproj -scheme GEGO -destination 'generic/platform=iOS' build CODE_SIGNING_ALLOWED=NO
 ```
 
+## Begegnungsarten
+
+Neun Formate, damit ein Streifzug sich nicht wie eine Fragestunde anfühlt.
+Gewertet („begriffen“) werden nur die, bei denen man etwas falsch machen kann.
+
+| Art | Gewertet | Was es ist |
+|---|---|---|
+| `quiz` | ja | Frage mit Auflösung |
+| `estimate` | ja | Schätzung am Schieberegler |
+| `ordering` | ja | Rangfolge durch Antippen in Reihenfolge |
+| `duel` | ja | Zwei Möglichkeiten, eine Entscheidung |
+| `hunt` | ja | Auftrag an die Kamera, läuft im Spiel weiter |
+| `story` | nein | Mehrere Absätze, der letzte soll sitzen |
+| `fact` | nein | Ein Gedanke zum Mitnehmen |
+| `mission` | nein* | Auftrag für die echte Welt |
+| `video` | nein | Suchbegriff zum Weiterschauen |
+
+\* `mission` zählt als begriffen, wenn man den Auftrag annimmt. Geprüft wird
+nichts – das Spiel glaubt dir.
+
+**Die Jagd** ist das einzige Minispiel, das AR wirklich braucht: Sie schickt
+den Spieler los („Finde noch zwei Dinge aus Holz“) und wird von der Erkennung
+abgenommen, nicht durch Antippen. Sie läuft als Leiste im HUD weiter, während
+das Blatt schon zu ist. Der Ausgangsgegenstand zählt nicht mit.
+
+**Ideen für weitere Minispiele**, noch nicht gebaut: Zuordnungspaare
+(Gegenstand → Zerfallszeit), Schnellrunde mit mehreren Duellen unter
+Zeitdruck, und eine Jagdvariante, die nicht nach einem Thema fragt, sondern
+nach einer R-Stufe („Finde etwas, das man reparieren kann“).
+
+## Diagnoseblatt
+
+Langer Druck auf die Anzeige oben links öffnet ein Werkzeugblatt. Es ist kein
+Teil des Spiels, sondern beantwortet die Frage, die sich am Gerät sonst nicht
+beantworten lässt: Wenn kein Fundpunkt erscheint – sieht die Erkennung nichts,
+sieht sie etwas unterhalb der Schwelle, oder sieht sie etwas, zu dem der
+Katalog nichts sagt? Drei Ursachen, von außen ein Symptom.
+
+Es zeigt die rohen Vorschläge der Klassifikation mit Konfidenz (Haken heißt:
+steht im Katalog), stellt `minimumConfidence` am Regler ein und zeichnet die
+Vision-Kästen als gelbe Rahmen ins Kamerabild. Liegen die Rahmen neben den
+Gegenständen, ist die Koordinatenumrechnung schuld und nicht die Erkennung.
+
 ## Offene Punkte
 
-Stand: erste Fassung baut, aber noch nie auf einem Gerät gelaufen.
+Stand: baut, aber noch nie auf einem Gerät gelaufen.
 
 1. **Erster Gerätetest steht aus.** Kommen überhaupt Punkte? Sitzen sie am
-   richtigen Fleck?
-2. **Koordinatenumrechnung Vision → Bildschirm** ist die wahrscheinlichste
+   richtigen Fleck? Das Diagnoseblatt ist dafür gebaut.
+2. **Koordinatenumrechnung Vision → Bildschirm** bleibt die wahrscheinlichste
    Fehlerquelle. Stelle ist in `ARGameView.swift` kommentiert
-   (`screenPoint(for:transform:viewport:)`).
-3. **Erkennungsschwelle geraten** – `SceneRecognizer.minimumConfidence` = 0,12.
-   Nur am Gerät einstellbar.
-4. **Minispiele fehlen** bis auf die Schätzfrage am Schieberegler.
-5. **Alle Inhalte unbelegt.** Jeder `sourceHint` muss abgearbeitet werden.
-6. **Fundpunkte sind schlichte Kugeln.** Keine Beschriftung, keine Animation,
-   kein Hinweis, was einen erwartet.
+   (`screenPoint(for:transform:viewport:)`). Verdacht: Die Vision-Kästen liegen
+   im bereits nach `.right` gedrehten Raum, `displayTransform` erwartet aber
+   den ungedrehten. Erst am Rahmen-Overlay ansehen, dann ändern.
+3. **Erkennungsschwelle geraten** – Startwert 0,12, am Gerät über das
+   Diagnoseblatt einstellbar. Der gefundene Wert gehört zurück in den Code.
+4. **Alle Inhalte unbelegt.** Jeder `sourceHint` muss abgearbeitet werden –
+   inzwischen sind es über hundert. Das ist die größte offene Arbeit am
+   Projekt und die einzige, die nicht Claude erledigen kann.
+5. **Themennamen sind grob.** Ein Fund heißt „Holz“, nicht „Dielenboden“. Für
+   1303 Begriffe deutsche Namen zu pflegen lohnt nicht; wer einzelne
+   Gegenstände hervorheben will, schreibt sie in den Handkatalog.
+6. **Die Jagd ist ungetestet.** Ob sich in einem normalen Zimmer in 90
+   Sekunden zwei weitere Gegenstände eines Themas erkennen lassen, weiß erst
+   der Gerätetest. Falls nicht: `Hunt.seconds` hoch, `count` runter.
+7. **Zeitdruckformate fehlen** – siehe Ideen unter „Begegnungsarten“.

@@ -15,8 +15,18 @@ struct CatalogEntry: Identifiable {
 
     /// Welche Begegnung dran ist. Wechselt mit der Anzahl der bisherigen Funde
     /// durch, damit derselbe Gegenstand beim zweiten Mal etwas Neues erzählt.
-    func encounter(forVisit visit: Int) -> Encounter {
-        encounters[visit % encounters.count]
+    ///
+    /// `avoiding` ist die Art, die gerade eben dran war – bei 19 Fakten
+    /// gegenüber 6 Schätzfragen im Katalog käme sonst ständig zweimal
+    /// hintereinander dasselbe Format. Gibt es keine Alternative, gewinnt der
+    /// reguläre Zug: lieber wiederholen als gar nichts zeigen.
+    func encounter(forVisit visit: Int, avoiding lastKind: String? = nil) -> Encounter {
+        let start = visit % encounters.count
+        for offset in 0..<encounters.count {
+            let candidate = encounters[(start + offset) % encounters.count]
+            if candidate.kindLabel != lastKind { return candidate }
+        }
+        return encounters[start]
     }
 }
 
