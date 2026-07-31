@@ -141,9 +141,25 @@ dem zu viele Punkte kamen und fast alle falsch waren:
   eindeutiger Stuhl soll schneller erscheinen als eine zweifelhafte Ecke, und
   das kann eine feste Zahl nicht unterscheiden.
 
-Der frühere Rückfall „nichts sticht hervor → ganzes Bild klassifizieren und
-Punkt in die Bildmitte“ ist **entfernt**. Er beschrieb den Raum statt eines
-Gegenstands und war drinnen die ergiebigste Unsinnsquelle.
+**Zwei Quellen für Bildbereiche**, weil sie unterschiedlich blind sind: Die
+Objektsuche (`Objectness`) findet abgegrenzte Dinge auf ruhigem Grund und
+versagt bei allem, was das Bild füllt oder gleichmäßig texturiert ist –
+Kühlschranktür, Baumkrone, Busch. Die Aufmerksamkeitssuche (`Attention`) fragt
+stattdessen, wohin ein Mensch schauen würde. Dazu kommt immer die Bildmitte
+als reservierter Bereich; sie ist das verlässlichste Signal dafür, worauf
+jemand überhaupt hält.
+
+Die Bildmitte gab es schon einmal als Rückfall und sie war die ergiebigste
+Unsinnsquelle – damals aber ohne jede Prüfung. Jetzt läuft sie durch dasselbe
+Themenvotum und dieselbe Bestätigung über die Zeit wie jeder andere Bereich.
+Eine weiße Wand liefert nur `material`, `structure`, `interior_room` – alles
+Oberbegriffe – und fällt durch.
+
+**Raumbegriffe stimmen nicht mit** (`Theme.sceneLabels`). Wer in der Küche auf
+den Kühlschrank hält, bekommt `kitchen`, `kitchen_room` und `interior_room`
+gratis dazu: drei Stimmen für „Gebautes" gegen eine für „Haushaltsgerät". Der
+Kühlschrank verlor gegen den Raum, in dem er steht. Bewusst nur Innenräume –
+`forest`, `park` und `garden` sind draußen sehr wohl das, worauf man schaut.
 
 **Fundpunkte sind Geometrie, keine Textur.** Der erste Versuch legte ein Blatt
 mit Alphakanal auf eine quadratische Fläche – am Gerät stand ein schwarzes

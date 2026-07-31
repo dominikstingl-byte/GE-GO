@@ -101,12 +101,9 @@ final class SceneRecognizer {
         let image = CIImage(cvPixelBuffer: pixelBuffer).oriented(orientation)
         var report = RecognitionReport()
 
-        // Kein Rückfall mehr auf das ganze Bild: Eine Klassifikation der
-        // gesamten Szene beschreibt den Raum, nicht einen Gegenstand, und
-        // setzte den Punkt blind in die Bildmitte. Drinnen war das die
-        // ergiebigste Quelle für Unsinn.
-        guard let regions = salientRegions(in: image), !regions.isEmpty else {
-            report.rejections.append("Nichts hebt sich ab – näher rangehen oder auf einen einzelnen Gegenstand halten")
+        let regions = candidateRegions(in: image)
+        guard !regions.isEmpty else {
+            report.rejections.append("Nichts hebt sich ab – näher an einen einzelnen Gegenstand")
             return report
         }
 
@@ -163,6 +160,9 @@ final class SceneRecognizer {
     private func vote(on candidates: [(label: String, confidence: Float)], box: CGRect) -> Vote {
         var scores: [Theme: Float] = [:]
         for candidate in candidates {
+            // Raumbegriffe stimmen gar nicht mit: Sie beschreiben, wo man
+            // steht, nicht worauf man hält.
+            guard Theme.votesForTheme(candidate.label) else { continue }
             guard let theme = Theme.forLabel(candidate.label) else { continue }
             scores[theme, default: 0] += candidate.confidence
         }
@@ -209,23 +209,70 @@ final class SceneRecognizer {
 
     // MARK: Schritt 1 – wo ist überhaupt etwas?
 
-    private func salientRegions(in image: CIImage) -> [CGRect]? {
-        let request = VNGenerateObjectnessBasedSaliencyImageRequest()
+    /// Die Mitte des Bildes, wenn sonst nichts taugt.
+    ///
+    /// Es gab diesen Rückfall schon einmal und er war die ergiebigste
+    /// Unsinnsquelle – damals aber ohne jede Prüfung: kein Themenvotum, keine
+    /// Bestätigung über die Zeit, und vor allem durften Oberbegriffe einen Fund
+    /// benennen. Eine Wand wurde so zu `material` und hieß „Gegenstand".
+    ///
+    /// Jetzt läuft er durch dieselben Prüfungen wie jeder andere Bereich. Eine
+    /// Wand liefert weiterhin nur `material`, `structure`, `interior_room` –
+    /// alles Oberbegriffe – und fällt damit durch. Ein Kühlschrank oder ein
+    /// Baum liefern etwas Konkretes und kommen durch.
+    private let centerRegion = CGRect(x: 0.20, y: 0.20, width: 0.6, height: 0.6)
+
+    /// Sammelt Bereiche aus zwei Quellen und wirft Doppelungen weg.
+    ///
+    /// Zwei Quellen, weil sie unterschiedlich blind sind: Die Objektsuche
+    /// findet abgegrenzte Dinge auf ruhigem Grund, versagt aber bei allem, was
+    /// das Bild füllt oder gleichmäßig texturiert ist – eine Kühlschranktür,
+    /// eine Baumkrone, ein Busch. Die Aufmerksamkeitssuche fragt stattdessen,
+    /// wohin ein Mensch schauen würde, und trifft genau dort.
+    private func candidateRegions(in image: CIImage) -> [CGRect] {
+        var found: [(box: CGRect, confidence: Float)] = []
+        found.append(contentsOf: salientRegions(VNGenerateObjectnessBasedSaliencyImageRequest(), in: image))
+        found.append(contentsOf: salientRegions(VNGenerateAttentionBasedSaliencyImageRequest(), in: image))
+
+        var kept: [CGRect] = []
+        for candidate in found.sorted(by: { $0.confidence > $1.confidence }) {
+            guard candidate.box.width >= minimumRegionSize,
+                  candidate.box.height >= minimumRegionSize else { continue }
+            guard !kept.contains(where: { overlap($0, candidate.box) > 0.55 }) else { continue }
+            kept.append(candidate.box)
+            // Ein Platz bleibt für die Bildmitte frei – sie ist das
+            // verlässlichste Signal dafür, worauf jemand überhaupt hält.
+            if kept.count >= maximumRegions - 1 { break }
+        }
+
+        // Die Bildmitte kommt dazu, solange noch Platz ist. Sie kostet einen
+        // Zuschnitt mehr und fängt alles ab, was zu groß ist, um aufzufallen.
+        if kept.count < maximumRegions,
+           !kept.contains(where: { overlap($0, centerRegion) > 0.55 }) {
+            kept.append(centerRegion)
+        }
+        return kept
+    }
+
+    private func salientRegions(_ request: VNImageBasedRequest, in image: CIImage) -> [(CGRect, Float)] {
         let handler = VNImageRequestHandler(ciImage: image, options: [:])
         do {
             try handler.perform([request])
         } catch {
-            return nil
+            return []
         }
         guard let observation = request.results?.first as? VNSaliencyImageObservation,
-              let objects = observation.salientObjects else { return nil }
+              let objects = observation.salientObjects else { return [] }
+        return objects.map { ($0.boundingBox, $0.confidence) }
+    }
 
-        return objects
-            .sorted { $0.confidence > $1.confidence }
-            .map(\.boundingBox)
-            .filter { $0.width >= minimumRegionSize && $0.height >= minimumRegionSize }
-            .prefix(maximumRegions)
-            .map { $0 }
+    /// Anteil der Überschneidung an der kleineren der beiden Flächen.
+    private func overlap(_ a: CGRect, _ b: CGRect) -> CGFloat {
+        let intersection = a.intersection(b)
+        guard !intersection.isNull else { return 0 }
+        let area = intersection.width * intersection.height
+        let smaller = min(a.width * a.height, b.width * b.height)
+        return smaller > 0 ? area / smaller : 0
     }
 
     // MARK: Schritt 2 – was ist es?
@@ -240,10 +287,14 @@ final class SceneRecognizer {
         }
         guard let results = request.results else { return [] }
 
+        // Erst filtern, dann kürzen. Andersherum – und so stand es hier –
+        // gingen Stimmen verloren: Stehen unter den besten zwölf Vorschlägen
+        // sechs ausgeschlossene, bleiben nur sechs für die Abstimmung übrig.
+        // Genau das drückt die Themensummen unter die Schwelle.
         return results
             .sorted { $0.confidence > $1.confidence }
-            .prefix(votingDepth)
             .filter { FindResolver.playableLabels.contains($0.identifier) }
+            .prefix(votingDepth)
             .map { (label: $0.identifier, confidence: $0.confidence) }
     }
 }

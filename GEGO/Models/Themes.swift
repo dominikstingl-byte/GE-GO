@@ -185,4 +185,26 @@ enum Theme: String, CaseIterable, Identifiable {
     ]
 
     static func isGeneric(_ label: String) -> Bool { genericLabels.contains(label) }
+
+    /// Begriffe, die den **Raum** beschreiben, in dem man steht – nicht den
+    /// Gegenstand, auf den man hält.
+    ///
+    /// Diese stimmen gar nicht erst mit, auch nicht für ihr eigenes Thema.
+    /// Grund: Wer in der Küche auf den Kühlschrank hält, bekommt von der
+    /// Klassifikation `kitchen`, `kitchen_room` und `interior_room` gratis dazu.
+    /// Drei Stimmen für „Gebautes" gegen eine für „Haushaltsgerät" – der
+    /// Kühlschrank verliert gegen den Raum, in dem er steht.
+    ///
+    /// Bewusst nur Innenräume. `forest`, `park` oder `garden` sind draußen
+    /// sehr wohl das, worauf man schaut.
+    static let sceneLabels: Set<String> = [
+        "interior_room", "interior_shop", "domicile", "apartment",
+        "kitchen", "kitchen_room", "bathroom", "bathroom_room",
+        "living_room", "dining_room", "bedroom", "classroom", "cellar",
+        "garage", "cubicle", "restaurant", "bar", "library", "museum",
+        "hospital", "health_club", "airport", "train_station", "arena",
+        "stadium", "zoo", "auditorium"
+    ]
+
+    static func votesForTheme(_ label: String) -> Bool { !sceneLabels.contains(label) }
 }
