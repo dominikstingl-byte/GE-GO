@@ -56,11 +56,21 @@ let regeln: [Regel] = [
 
     // MARK: Werkstoffe – der Kern des Spiels
 
+    // Lebende Bäume sind kein Werkstoff. Vor einer Buche etwas über
+    // Altholz-Kategorien zu lesen, ist schräg – also eigenes Thema. Im
+    // Holz-Thema bleibt nur, was schon verarbeitet ist.
+    Regel(thema: "tree",
+          exact: ["tree", "forest", "foliage", "branch", "evergreen", "sequoia",
+                  "willow", "bonsai", "jungle", "mangrove", "orchard", "acorn",
+                  "blossom", "christmas_tree"],
+          contains: ["_tree", "tree_"]),
+
+    // Ohne `contains` – „wood" als Teilzeichenkette fing auch `woodpecker`
+    // und `woodwind` ein, und die Tierregel kommt erst später. Ein Specht im
+    // Holz-Thema fällt lange nicht auf.
     Regel(thema: "wood",
-          exact: ["log", "lumber", "plank", "sawdust", "timber", "abacus"],
-          contains: ["wood", "tree", "forest", "branch", "foliage", "sequoia",
-                     "willow", "bonsai", "evergreen", "jungle", "mangrove",
-                     "bamboo", "cork"]),
+          exact: ["wood_natural", "wood_processed", "log", "lumber", "plank",
+                  "sawdust", "timber", "abacus", "bamboo", "cork"]),
 
     Regel(thema: "metal",
           exact: ["anvil", "gears", "winch", "pulley", "chain", "wire", "nail",

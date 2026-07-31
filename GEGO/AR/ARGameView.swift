@@ -50,7 +50,13 @@ struct ARGameView: UIViewRepresentable {
         private struct Track {
             let theme: Theme
             var label: String
+            /// Geglättet – nur zum Wiedererkennen über mehrere Durchläufe.
             var point: CGPoint
+            /// Die zuletzt gesehene Stelle. Nur die zählt beim Setzen: Der
+            /// geglättete Punkt hinkt einem Kameraschwenk hinterher, und ein
+            /// Blatt, das an der Stelle von vor einer Sekunde verankert wird,
+            /// sitzt sichtbar daneben.
+            var lastPoint: CGPoint
             var hits: Int
             /// Aufsummierte Stärke aller Beobachtungen. Nicht die Anzahl:
             /// Ein eindeutiger Stuhl soll schneller erscheinen als eine
@@ -202,11 +208,12 @@ struct ARGameView: UIViewRepresentable {
                     // Beobachtung nicht abreißen lässt.
                     tracks[index].point = CGPoint(x: (tracks[index].point.x + point.x) / 2,
                                                   y: (tracks[index].point.y + point.y) / 2)
+                    tracks[index].lastPoint = point
                     tracks[index].label = sighting.label
                 } else {
                     tracks.append(Track(theme: sighting.theme, label: sighting.label,
-                                        point: point, hits: 1, evidence: sighting.score,
-                                        lastSeen: now))
+                                        point: point, lastPoint: point, hits: 1,
+                                        evidence: sighting.score, lastSeen: now))
                 }
             }
 
@@ -221,7 +228,7 @@ struct ARGameView: UIViewRepresentable {
                 state.registerSighting(track.label)
 
                 if let until = cooldown[track.label], now < until { continue }
-                guard let world = worldPosition(at: track.point, in: view) else { continue }
+                guard let world = worldPosition(at: track.lastPoint, in: view) else { continue }
 
                 let tooClose = spots.contains {
                     $0.label == track.label && simd_distance($0.position, world) < minimumDistance
@@ -274,18 +281,61 @@ struct ARGameView: UIViewRepresentable {
             return CGRect(x: x1, y: y1, width: x2 - x1, height: y2 - y1)
         }
 
-        /// Sucht den Ort im Raum hinter einem Bildschirmpunkt. Trifft der Strahl
-        /// keine erkannte Fläche, wird der Punkt zwei Meter vor die Kamera
-        /// gehängt – lieber ungenau als gar nicht.
+        /// Sucht den Ort im Raum hinter einem Bildschirmpunkt.
+        ///
+        /// Vier Versuche, von genau nach grob. Der letzte – zwei Meter vor die
+        /// Kamera – war lange der einzige Rückfall und ist der Grund, warum
+        /// Blätter frei im Raum hingen: Steht der Baum acht Meter weg, klebt
+        /// das Blatt trotzdem zwei Meter vor der Nase und wandert beim
+        /// nächsten Schritt sichtbar mit.
         private func worldPosition(at point: CGPoint, in view: ARView) -> SIMD3<Float>? {
+            // 1. Eine tatsächlich vermessene Fläche.
+            if let query = view.makeRaycastQuery(from: point, allowing: .existingPlaneGeometry, alignment: .any),
+               let hit = view.session.raycast(query).first {
+                return simd_make_float3(hit.worldTransform.columns.3)
+            }
+            // 2. Eine geschätzte Fläche.
             if let query = view.makeRaycastQuery(from: point, allowing: .estimatedPlane, alignment: .any),
                let hit = view.session.raycast(query).first {
                 return simd_make_float3(hit.worldTransform.columns.3)
             }
+            // 3. Die Punktwolke, die ARKit ohnehin führt. Für alles, was keine
+            //    Fläche ist – Baumkronen, Büsche, Geländer –, ist das die
+            //    einzige Entfernungsangabe, die es ohne LiDAR gibt.
+            if let ray = view.ray(through: point),
+               let distance = featureDepth(near: point, in: view) {
+                return ray.origin + ray.direction * distance
+            }
+            // 4. Aufgeben und schätzen.
             if let ray = view.ray(through: point) {
-                return ray.origin + ray.direction * 2.0
+                return ray.origin + ray.direction * 2.5
             }
             return nil
+        }
+
+        /// Median der Entfernung aller Merkmalspunkte, die nahe genug am
+        /// Bildschirmpunkt liegen.
+        ///
+        /// Median und nicht Mittelwert: Zwischen Blättern hindurch sieht ARKit
+        /// regelmäßig die Hauswand dahinter, und ein einziger solcher Ausreißer
+        /// würde den Mittelwert um Meter verschieben.
+        private func featureDepth(near point: CGPoint, in view: ARView) -> Float? {
+            guard let frame = view.session.currentFrame,
+                  let cloud = frame.rawFeaturePoints?.points, !cloud.isEmpty else { return nil }
+
+            let camera = frame.camera.transform.columns.3
+            let origin = SIMD3<Float>(camera.x, camera.y, camera.z)
+            let radius = view.bounds.width * 0.12
+
+            var distances: [Float] = []
+            for world in cloud {
+                guard let projected = view.project(world) else { continue }
+                guard hypot(projected.x - point.x, projected.y - point.y) < radius else { continue }
+                distances.append(simd_distance(origin, world))
+            }
+            guard distances.count >= 4 else { return nil }
+            distances.sort()
+            return distances[distances.count / 2]
         }
 
         // MARK: Der Fundpunkt selbst

@@ -745,6 +745,72 @@ extension Theme {
             )))
     ]
 
+    // MARK: - Baum
+
+    // Eigenes Thema, seit lebende Bäume nicht mehr im Holz-Thema landen. Vor
+    // einer Buche etwas über Altholz-Kategorien zu lesen war schräg.
+
+    static let treeEncounters: [ThemedEncounter] = [
+        ThemedEncounter(strategy: .rethink, sdgs: [.climateAction, .lifeOnLand], encounter:
+            .story(Story(
+                title: "Die Pumpe, die keine ist",
+                paragraphs: [
+                    "Ein Baum hebt jeden Tag hunderte Liter Wasser aus dem Boden bis in die Krone. Bei manchen Arten über hundert Meter hoch.",
+                    "Die naheliegende Erklärung wäre eine Pumpe an der Wurzel, die drückt. Es gibt sie nicht. Bäume haben kein Herz und keinen Muskel.",
+                    "Stattdessen zieht das Blatt. Verdunstet oben Wasser, entsteht ein Sog – und weil Wassermoleküle aneinander haften wie eine Kette, hängt an jedem verdunsteten Tropfen die ganze Säule bis zur Wurzel.",
+                    "Der Baum saugt also nicht. Er lässt oben los, und der Rest folgt. Die höchsten Wassersäulen der Erde stehen nicht unter Druck, sondern unter Zug."
+                ],
+                sourceHint: "Kohäsionstheorie des Wassertransports, maximale Steighöhe bei Bäumen"
+            ))),
+
+        ThemedEncounter(strategy: .reduce, sdgs: [.climateAction, .sustainableCities], encounter:
+            .estimate(Estimate(
+                question: "Wie viel Wasser verdunstet eine ausgewachsene Buche an einem heißen Sommertag?",
+                range: 0...800,
+                answer: 400,
+                unit: "Liter",
+                explanation: "Diese Verdunstung kostet Energie – und die holt sich das Blatt aus der Umgebungsluft. Ein großer Baum kühlt damit so stark wie mehrere Klimageräte, nur ohne Strom und ohne Abwärme nach draußen.",
+                sourceHint: "Transpirationsleistung ausgewachsener Laubbäume pro Tag; Kühlleistung in kWh"
+            ))),
+
+        ThemedEncounter(strategy: .refuse, sdgs: [.sustainableCities, .lifeOnLand], encounter:
+            .duel(Duel(
+                question: "Ein alter Straßenbaum muss einem Bauvorhaben weichen. Als Ausgleich werden zehn junge gepflanzt.",
+                optionA: "Guter Tausch – zehn für einen",
+                optionB: "Schlechter Tausch",
+                betterIsA: false,
+                explanation: "Blattmasse, Kühlleistung und Kohlenstoffspeicher wachsen nicht linear mit der Stückzahl, sondern mit der Größe. Ein junger Baum braucht Jahrzehnte, um einen alten zu ersetzen – und in dieser Zeit fehlt die Leistung ganz. Zehn Setzlinge sind ein Versprechen, kein Ersatz.",
+                sourceHint: "Verhältnis Blattfläche und Kühlleistung Jungbaum vs. Altbaum; Ausgleichspflanzungen"
+            ))),
+
+        ThemedEncounter(strategy: .repurpose, sdgs: [.lifeOnLand], encounter:
+            .fact(Fact(
+                text: "Ein toter Baum, der stehen bleibt, beherbergt mehr Arten als ein lebender: Käfer, Pilze, Spechte, Fledermäuse. In der Forstwirtschaft heißt er Biotopbaum – und ihn stehen zu lassen ist eine Maßnahme, die aus Nichtstun besteht."
+            ))),
+
+        ThemedEncounter(strategy: .repair, sdgs: [.sustainableCities], encounter:
+            .mission(Mission(
+                prompt: "Such den nächsten Straßenbaum und schau dir an, wie viel offener Boden ihm bleibt.",
+                hint: "Die Baumscheibe ist oft kleiner als ein Schreibtisch, rundherum Asphalt. Wasser läuft daran vorbei in den Gully. Genau daran sterben Stadtbäume – nicht an der Hitze, am Durst."
+            ))),
+
+        ThemedEncounter(strategy: .recover, sdgs: [.climateAction, .lifeOnLand], encounter:
+            .ordering(Ordering(
+                question: "Wann speichert ein Wald am meisten Kohlenstoff dazu?",
+                itemsInOrder: ["Frisch gepflanzt", "Nach hundert Jahren", "Nach dreißig Jahren", "Im mittleren Alter"],
+                lowLabel: "am wenigsten",
+                highLabel: "am meisten",
+                explanation: "Junge Bäume wachsen schnell, haben aber wenig Masse; sehr alte legen kaum noch zu. Dazwischen liegt das Maximum. Das ist das Argument hinter der Bewirtschaftung – und zugleich der Grund, warum es zu kurz greift: Ein alter Wald speichert zwar kaum noch dazu, hält aber sehr viel fest, und im Boden geht es weiter.",
+                sourceHint: "Zuwachskurven und Kohlenstoffvorräte nach Waldalter, ober- und unterirdisch"
+            ))),
+
+        ThemedEncounter(strategy: .reuse, sdgs: [.lifeOnLand, .climateAction], encounter:
+            .video(VideoTip(
+                searchTerm: "Wood Wide Web Pilznetzwerk Bäume Kommunikation Kritik",
+                why: "Dass Bäume über Pilzgeflechte im Boden verbunden sind, ist eine der populärsten Geschichten der letzten Jahre – und wissenschaftlich umstrittener, als sie meist erzählt wird. Gerade deshalb lohnt es, beide Seiten zu hören."
+            )))
+    ]
+
     // MARK: - Sport
 
     static let sportEncounters: [ThemedEncounter] = [

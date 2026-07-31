@@ -37,7 +37,7 @@ enum Theme: String, CaseIterable, Identifiable {
     case plantFood, animalFood, processedFood, drink
 
     // Lebendiges und Draußen
-    case animal, plant, landscape
+    case animal, plant, tree, landscape
 
     // Der Rest
     case sport, instrument, stuff
@@ -73,6 +73,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .drink: return "Getränk"
         case .animal: return "Tier"
         case .plant: return "Pflanze"
+        case .tree: return "Baum"
         case .landscape: return "Landschaft"
         case .sport: return "Sport"
         case .instrument: return "Instrument"
@@ -83,7 +84,7 @@ enum Theme: String, CaseIterable, Identifiable {
     /// Wonach man suchen kann, wenn ein Blatt noch fehlt. Steht in der Sammlung.
     var searchHint: String {
         switch self {
-        case .wood: return "Tisch, Boden, Baum"
+        case .wood: return "Dielen, Brett, Tischplatte"
         case .metal: return "Besteck, Zaun, Rohr"
         case .glass: return "Fenster, Glas, Flasche"
         case .paper: return "Buch, Karton, Zeitung"
@@ -106,6 +107,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .drink: return "Kaffee, Saft, Bier"
         case .animal: return "Hund, Vogel, Insekt"
         case .plant: return "Blume, Gras, Topfpflanze"
+        case .tree: return "Baum, Hecke, Wald"
         case .landscape: return "Himmel, Berg, Strand"
         case .sport: return "Ball, Fahrrad, Turnschuh"
         case .instrument: return "Gitarre, Klavier, Trommel"
@@ -140,6 +142,7 @@ enum Theme: String, CaseIterable, Identifiable {
         case .drink: return Self.drinkEncounters
         case .animal: return Self.animalEncounters
         case .plant: return Self.plantEncounters
+        case .tree: return Self.treeEncounters
         case .landscape: return Self.landscapeEncounters
         case .sport: return Self.sportEncounters
         case .instrument: return Self.instrumentEncounters
