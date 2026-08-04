@@ -13,6 +13,7 @@ struct CollectionView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var selected: RStrategy?
+    @State private var showsResetConfirmation = false
 
     var body: some View {
         NavigationStack {
@@ -28,6 +29,7 @@ struct CollectionView: View {
                         .font(.footnote)
                         .foregroundStyle(Palette.textSecondary)
                         .padding(.top, Spacing.s)
+                    resetSection
                 }
                 .padding(Spacing.m)
                 .readableWidth()
@@ -40,7 +42,40 @@ struct CollectionView: View {
                     Button("Fertig") { dismiss() }
                 }
             }
+            .confirmationDialog("Fortschritt wirklich zurücksetzen?",
+                                isPresented: $showsResetConfirmation,
+                                titleVisibility: .visible) {
+                Button("Zurücksetzen", role: .destructive) {
+                    withAnimation { state.reset() }
+                    selected = nil
+                }
+                Button("Abbrechen", role: .cancel) {}
+            } message: {
+                Text("Alle Funde, Blätter und Punkte auf diesem Gerät gehen verloren. Das lässt sich nicht rückgängig machen.")
+            }
         }
+    }
+
+    // MARK: Zurücksetzen
+
+    /// Der Reset lag bisher nur im Diagnoseblatt. Hier ist er auch ohne den
+    /// Entwickler-Umweg erreichbar – dezent am Fuß der Sammlung und mit
+    /// Rückfrage, weil er sichtbar für Spieler ist.
+    private var resetSection: some View {
+        VStack(spacing: Spacing.xs) {
+            Button(role: .destructive) {
+                showsResetConfirmation = true
+            } label: {
+                Text("Fortschritt zurücksetzen")
+                    .font(.footnote.weight(.medium))
+            }
+            Text("Löscht alle Funde, Blätter und Punkte auf diesem Gerät.")
+                .font(.caption2)
+                .foregroundStyle(Palette.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Spacing.l)
     }
 
     // MARK: Die Blüte
